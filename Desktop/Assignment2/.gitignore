@@ -1,0 +1,17 @@
+# R specific
+.Rhistory
+.RData
+.Rproj.user
+
+# Output files
+*.log
+*.pdf
+Rplots.pdf
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
