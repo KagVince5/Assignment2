@@ -1,0 +1,12 @@
+tensorflow
+tensorflow-hub
+tf-models-official
+pillow
+pandas
+scikit-learn
+numpy
+matplotlib
+opencv-python
+albumentations
+protobuf
+PyYAML
