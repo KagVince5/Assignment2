@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import random
 import shutil
 from collections import defaultdict
@@ -86,6 +87,12 @@ def _require_value(row: dict[str, str], key: str) -> str:
     return value
 
 
+def _safe_output_name(source_path: Path) -> str:
+    digest = hashlib.sha1(source_path.as_posix().encode("utf-8")).hexdigest()[:10]
+    suffix = source_path.suffix or ".jpg"
+    return f"{source_path.stem}__{digest}{suffix}"
+
+
 def prepare_classifier_dataset(manifest_path: Path, dataset_root: Path, seed: int = 13) -> dict[str, list[str]]:
     rows = load_manifest(manifest_path)
     valid_rows: list[dict[str, str]] = []
@@ -110,9 +117,9 @@ def prepare_classifier_dataset(manifest_path: Path, dataset_root: Path, seed: in
             source_path = Path(row["local_path"])
             target_dir = dataset_root / split_name / status
             target_dir.mkdir(parents=True, exist_ok=True)
-            target_path = target_dir / source_path.name
+            target_path = target_dir / _safe_output_name(source_path)
             shutil.copy2(source_path, target_path)
-            copied_files[status].append(source_path.name)
+            copied_files[status].append(str(target_path))
 
     return copied_files
 

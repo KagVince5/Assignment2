@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import random
 import shutil
 from collections import defaultdict
@@ -42,6 +43,15 @@ def load_manifest(manifest_path: Path) -> list[dict[str, str]]:
         return [dict(row) for row in reader]
 
 
+def _group_rows_by_image(rows: list[dict[str, Any]]) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        validated = validate_row(row)
+        key = (validated["image_path"], validated["label_path"])
+        grouped[key].append(validated)
+    return grouped
+
+
 def _stable_split_counts(size: int, ratios: tuple[float, float, float]) -> list[int]:
     raw_counts = [int(size * ratio) for ratio in ratios]
     remainder = size - sum(raw_counts)
@@ -57,27 +67,27 @@ def split_rows(rows: list[dict[str, Any]], seed: int = 13, ratios: tuple[float, 
     if len(ratios) != 3:
         raise ValueError("split ratios must contain exactly three values")
 
-    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in rows:
-        validated = validate_row(row)
-        grouped[validated["label"]].append(validated)
-
     rng = random.Random(seed)
     split_rows_map: dict[str, list[dict[str, Any]]] = {split: [] for split in DETECTOR_SPLITS}
 
-    for label in sorted(grouped):
-        items = list(grouped[label])
-        rng.shuffle(items)
-        counts = _stable_split_counts(len(items), ratios)
-        start = 0
-        for split_name, count in zip(DETECTOR_SPLITS, counts):
-            split_rows_map[split_name].extend(items[start : start + count])
-            start += count
+    grouped = list(_group_rows_by_image(rows).values())
+    rng.shuffle(grouped)
+    counts = _stable_split_counts(len(grouped), ratios)
+    start = 0
+    for split_name, count in zip(DETECTOR_SPLITS, counts):
+        for group in grouped[start : start + count]:
+            split_rows_map[split_name].extend(group)
+        start += count
 
     for split_name in DETECTOR_SPLITS:
         rng.shuffle(split_rows_map[split_name])
 
     return split_rows_map
+
+
+def _safe_output_stem(source_path: Path) -> str:
+    digest = hashlib.sha1(source_path.as_posix().encode("utf-8")).hexdigest()[:10]
+    return f"{source_path.stem}__{digest}"
 
 
 def prepare_detector_dataset(manifest_path: Path, dataset_root: Path, seed: int = 13) -> dict[str, dict[str, list[str]]]:
@@ -93,22 +103,27 @@ def prepare_detector_dataset(manifest_path: Path, dataset_root: Path, seed: int 
     for split_name, split_rows_list in split_rows_map.items():
         image_target_dir = dataset_root / "images" / split_name
         label_target_dir = dataset_root / "labels" / split_name
+        copied_keys: set[tuple[str, str]] = set()
 
         for row in split_rows_list:
             image_path = Path(row["image_path"])
             label_path = Path(row["label_path"])
+            key = (str(image_path), str(label_path))
+            if key in copied_keys:
+                continue
             if not image_path.exists():
                 raise ValueError(f"Image does not exist: {image_path}")
             if not label_path.exists():
                 raise ValueError(f"Label file does not exist: {label_path}")
 
-            target_stem = image_path.stem
-            target_image = image_target_dir / image_path.name
+            target_stem = _safe_output_stem(image_path)
+            target_image = image_target_dir / f"{target_stem}{image_path.suffix or '.jpg'}"
             target_label = label_target_dir / f"{target_stem}.txt"
             shutil.copy2(image_path, target_image)
             shutil.copy2(label_path, target_label)
-            copied_images[split_name].append(target_image.name)
-            copied_labels[split_name].append(target_label.name)
+            copied_images[split_name].append(str(target_image))
+            copied_labels[split_name].append(str(target_label))
+            copied_keys.add(key)
 
     return {"images": copied_images, "labels": copied_labels}
 

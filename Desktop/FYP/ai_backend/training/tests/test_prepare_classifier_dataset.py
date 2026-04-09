@@ -11,6 +11,7 @@ from ai_backend.training.prepare_classifier_dataset import (
     CLASS_LABELS,
     map_raw_label_to_status,
     prepare_classifier_dataset,
+    _safe_output_name,
     split_rows,
 )
 
@@ -33,39 +34,56 @@ class PrepareClassifierDatasetTests(unittest.TestCase):
     def test_prepare_classifier_dataset_copies_expected_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            source_dir = root / "source"
+            source_dir_a = root / "source_a"
+            source_dir_b = root / "source_b"
             dataset_dir = root / "dataset"
-            source_dir.mkdir()
+            source_dir_a.mkdir()
+            source_dir_b.mkdir()
 
             rows = [
-                ("healthy_1.jpg", "healthy"),
-                ("stress_1.jpg", "water_stress"),
-                ("disease_1.jpg", "fruit_rot"),
-                ("urgent_1.jpg", "heart_rot"),
+                (source_dir_a / "healthy_1.jpg", "healthy"),
+                (source_dir_b / "healthy_1.jpg", "healthy"),
+                (source_dir_a / "stress_1.jpg", "water_stress"),
+                (source_dir_a / "disease_1.jpg", "fruit_rot"),
+                (source_dir_a / "urgent_1.jpg", "heart_rot"),
             ]
 
             manifest_path = root / "classifier_manifest.csv"
             with manifest_path.open("w", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(handle, fieldnames=["local_path", "raw_label"])
                 writer.writeheader()
-                for filename, raw_label in rows:
-                    image_path = source_dir / filename
+                for image_path, raw_label in rows:
                     image_path.write_bytes(b"fake-image")
                     writer.writerow({"local_path": str(image_path), "raw_label": raw_label})
 
             result = prepare_classifier_dataset(manifest_path, dataset_dir, seed=7)
 
-            self.assertEqual(sorted(result["Healthy"]), ["healthy_1.jpg"])
-            self.assertEqual(sorted(result["Needs_Attention"]), ["stress_1.jpg"])
-            self.assertEqual(sorted(result["Disease_Risk"]), ["disease_1.jpg"])
-            self.assertEqual(sorted(result["Urgent_Action"]), ["urgent_1.jpg"])
+            self.assertEqual(
+                {Path(path).name for path in result["Healthy"]},
+                {
+                    _safe_output_name(source_dir_a / "healthy_1.jpg"),
+                    _safe_output_name(source_dir_b / "healthy_1.jpg"),
+                },
+            )
+            self.assertEqual(
+                {Path(path).name for path in result["Needs_Attention"]},
+                {_safe_output_name(source_dir_a / "stress_1.jpg")},
+            )
+            self.assertEqual(
+                {Path(path).name for path in result["Disease_Risk"]},
+                {_safe_output_name(source_dir_a / "disease_1.jpg")},
+            )
+            self.assertEqual(
+                {Path(path).name for path in result["Urgent_Action"]},
+                {_safe_output_name(source_dir_a / "urgent_1.jpg")},
+            )
 
             for label in CLASS_LABELS:
                 self.assertTrue((dataset_dir / "train" / label).exists())
                 self.assertTrue((dataset_dir / "val" / label).exists())
                 self.assertTrue((dataset_dir / "test" / label).exists())
 
-    def test_normalize_source_manifest_supports_aliases_and_fields(self) -> None:
+    def test_normalize_source_manifest_supports_aliases_and_optional_blanks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             input_path = root / "source_manifest.json"
@@ -78,10 +96,10 @@ class PrepareClassifierDatasetTests(unittest.TestCase):
                     [
                         {
                             "source": "Roboflow Pineapple Set",
-                            "url": "https://example.com/pineapple",
-                            "licence": "CC BY 4.0",
+                            "url": "",
+                            "licence": "",
                             "file_path": str(image_path),
-                            "description": "healthy field image",
+                            "description": "",
                         }
                     ]
                 ),
@@ -95,10 +113,10 @@ class PrepareClassifierDatasetTests(unittest.TestCase):
                 [
                     {
                         "source_name": "Roboflow Pineapple Set",
-                        "source_url": "https://example.com/pineapple",
-                        "license": "CC BY 4.0",
+                        "source_url": "",
+                        "license": "",
                         "local_path": str(image_path),
-                        "notes": "healthy field image",
+                        "notes": "",
                     }
                 ],
             )
@@ -110,10 +128,47 @@ class PrepareClassifierDatasetTests(unittest.TestCase):
 
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["source_name"], "Roboflow Pineapple Set")
-            self.assertEqual(rows[0]["source_url"], "https://example.com/pineapple")
-            self.assertEqual(rows[0]["license"], "CC BY 4.0")
+            self.assertEqual(rows[0]["source_url"], "")
+            self.assertEqual(rows[0]["license"], "")
             self.assertEqual(rows[0]["local_path"], str(image_path))
-            self.assertEqual(rows[0]["notes"], "healthy field image")
+            self.assertEqual(rows[0]["notes"], "")
+
+    def test_normalize_source_manifest_rejects_malformed_csv_headers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            input_path = root / "source_manifest.csv"
+            output_path = root / "source_manifest_out.csv"
+            input_path.write_text("source_url,license\nhttps://example.com,pineapple\n", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                normalize_source_manifest(input_path, output_path)
+
+    def test_normalize_source_manifest_rejects_conflicting_alias_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            input_path = root / "source_manifest.json"
+            output_path = root / "source_manifest.csv"
+            image_path = root / "pineapple_01.jpg"
+            image_path.write_bytes(b"fake-image")
+
+            input_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "source_name": "Roboflow Pineapple Set",
+                            "source": "Different Source Name",
+                            "url": "https://example.com/pineapple",
+                            "license": "CC BY 4.0",
+                            "local_path": str(image_path),
+                            "notes": "healthy field image",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                normalize_source_manifest(input_path, output_path)
 
 
 if __name__ == "__main__":
