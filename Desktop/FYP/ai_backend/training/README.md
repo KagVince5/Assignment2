@@ -92,6 +92,66 @@ training/
 7. Fuse both outputs into one final status.
 8. Pass the fused JSON to local Gemma for task generation.
 
+## Local Commands
+
+Run these commands from the repository root.
+
+### Prepare source metadata
+
+```powershell
+python ai_backend/training/prepare_source_manifest.py --input <source-metadata.csv> --output ai_backend/training/manifests/source_manifest.csv
+```
+
+### Prepare classifier dataset
+
+```powershell
+python ai_backend/training/prepare_classifier_dataset.py --manifest ai_backend/training/manifests/classifier_manifest.csv --dataset-root ai_backend/training/datasets/classifier
+```
+
+### Prepare detector dataset
+
+```powershell
+python ai_backend/training/prepare_detector_dataset.py --manifest ai_backend/training/manifests/detector_manifest.csv --dataset-root ai_backend/training/datasets/detector
+```
+
+### Train classifier
+
+```powershell
+python ai_backend/training/train_status_classifier_tf.py --dataset-root ai_backend/training/datasets/classifier --output-dir ai_backend/training/models/classifier
+```
+
+### Train detector scaffold
+
+```powershell
+python ai_backend/training/train_object_detector_tf.py --dataset-root ai_backend/training/datasets/detector --output-dir ai_backend/training/models/detector --annotation-format tfrecord
+```
+
+### Export detector inference artifacts
+
+```powershell
+python ai_backend/training/export_object_detector_tf.py --source-path <trained-detector-artifact> --export-dir ai_backend/training/models/detector/inference
+```
+
+The detector inference folder must contain a loadable TensorFlow artifact such as `saved_model`, `model.keras`, or `pineapple_detector.keras`. The current detector training script is still a scaffold, so inference and the full pipeline will fail until a real detector export is available.
+
+### Run one-image inference
+
+```powershell
+python ai_backend/training/infer_pineapple_status.py --image-path <pineapple-image.jpg> --classifier-model-dir ai_backend/training/models/classifier --detector-export-dir ai_backend/training/models/detector/inference --output-dir ai_backend/training/outputs/predictions
+```
+
+### Generate Gemma tasks from fused prediction JSON
+
+```powershell
+python ai_backend/training/generate_tasks_with_gemma.py --fused-json-path ai_backend/training/outputs/predictions/<pineapple-image>.json --output-dir ai_backend/training/outputs/predictions
+```
+
+### Run the full local pipeline
+
+```powershell
+python ai_backend/training/run_local_pipeline.py --image-path <pineapple-image.jpg> --classifier-model-dir ai_backend/training/models/classifier --detector-export-dir ai_backend/training/models/detector/inference --output-dir ai_backend/training/outputs/predictions
+```
+
 ## Training Dependencies
 
 Use `requirements-training.txt` for the local training environment.
