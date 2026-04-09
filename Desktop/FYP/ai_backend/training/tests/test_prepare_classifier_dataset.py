@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import csv
+import json
 import tempfile
 from pathlib import Path
 import unittest
 
+from ai_backend.training.prepare_source_manifest import MANIFEST_FIELDS, normalize_source_manifest
 from ai_backend.training.prepare_classifier_dataset import (
     CLASS_LABELS,
     map_raw_label_to_status,
@@ -62,6 +64,56 @@ class PrepareClassifierDatasetTests(unittest.TestCase):
                 self.assertTrue((dataset_dir / "train" / label).exists())
                 self.assertTrue((dataset_dir / "val" / label).exists())
                 self.assertTrue((dataset_dir / "test" / label).exists())
+
+    def test_normalize_source_manifest_supports_aliases_and_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            input_path = root / "source_manifest.json"
+            output_path = root / "source_manifest.csv"
+            image_path = root / "pineapple_01.jpg"
+            image_path.write_bytes(b"fake-image")
+
+            input_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "source": "Roboflow Pineapple Set",
+                            "url": "https://example.com/pineapple",
+                            "licence": "CC BY 4.0",
+                            "file_path": str(image_path),
+                            "description": "healthy field image",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            normalized = normalize_source_manifest(input_path, output_path)
+
+            self.assertEqual(
+                normalized,
+                [
+                    {
+                        "source_name": "Roboflow Pineapple Set",
+                        "source_url": "https://example.com/pineapple",
+                        "license": "CC BY 4.0",
+                        "local_path": str(image_path),
+                        "notes": "healthy field image",
+                    }
+                ],
+            )
+
+            with output_path.open("r", encoding="utf-8", newline="") as handle:
+                reader = csv.DictReader(handle)
+                self.assertEqual(reader.fieldnames, MANIFEST_FIELDS)
+                rows = list(reader)
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["source_name"], "Roboflow Pineapple Set")
+            self.assertEqual(rows[0]["source_url"], "https://example.com/pineapple")
+            self.assertEqual(rows[0]["license"], "CC BY 4.0")
+            self.assertEqual(rows[0]["local_path"], str(image_path))
+            self.assertEqual(rows[0]["notes"], "healthy field image")
 
 
 if __name__ == "__main__":

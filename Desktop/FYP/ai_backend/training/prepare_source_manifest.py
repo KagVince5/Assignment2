@@ -19,10 +19,9 @@ def normalize_record(record: dict[str, Any]) -> dict[str, str]:
         "notes": str(record.get("notes") or record.get("note") or record.get("description") or "").strip(),
     }
 
-    if not normalized["source_name"]:
-        raise ValueError("Missing required value: source_name")
-    if not normalized["local_path"]:
-        raise ValueError("Missing required value: local_path")
+    for field in MANIFEST_FIELDS:
+        if not normalized[field]:
+            raise ValueError(f"Missing required value: {field}")
 
     return normalized
 

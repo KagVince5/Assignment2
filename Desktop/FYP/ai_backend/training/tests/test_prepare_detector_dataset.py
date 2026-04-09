@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
+from ai_backend.training.prepare_source_manifest import normalize_record
 from ai_backend.training.prepare_detector_dataset import (
     DETECTOR_SPLITS,
     prepare_detector_dataset,
@@ -100,6 +101,22 @@ class PrepareDetectorDatasetTests(unittest.TestCase):
             for split in DETECTOR_SPLITS:
                 self.assertTrue((dataset_dir / "images" / split).exists())
                 self.assertTrue((dataset_dir / "labels" / split).exists())
+
+    def test_source_manifest_validation_rejects_missing_required_fields(self) -> None:
+        required_fields = {
+            "source_name": "Roboflow Pineapple Set",
+            "source_url": "https://example.com/pineapple",
+            "license": "CC BY 4.0",
+            "local_path": "pineapple_01.jpg",
+            "notes": "healthy field image",
+        }
+
+        for field in required_fields:
+            invalid = dict(required_fields)
+            invalid[field] = ""
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    normalize_record(invalid)
 
 
 if __name__ == "__main__":
