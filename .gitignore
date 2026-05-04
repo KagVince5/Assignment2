@@ -1,0 +1,6 @@
+.env.local
+*.db
+__pycache__/
+uploads/
+*.pyc
+node_modules/

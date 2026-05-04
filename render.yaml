@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: pineguard-api
+    runtime: python
+    plan: free
+    buildCommand: cd ai_backend && pip install -r requirements.txt
+    startCommand: cd ai_backend && uvicorn ollama_backend:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_FALLBACK_URL
+        value: ""
+      - key: ALLOW_DATABASE_FALLBACK
+        value: "false"
+      - key: AI_LAYER_BASE_URL
+        value: http://161.118.235.40:8000
+      - key: AI_LAYER_TIMEOUT_SECONDS
+        value: "240"
+      - key: REQUEST_TIMEOUT_SECONDS
+        value: "240"
+      - key: PUBLIC_BASE_URL
+        value: https://pineguard-api.onrender.com
+      - key: UPLOADS_DIR
+        value: /tmp/pineguard_uploads
+
+  - type: web
+    name: pineguard-web-admin
+    runtime: static
+    buildCommand: node deploy/render_write_web_config.mjs
+    staticPublishPath: web_admin
+    autoDeploy: true
+    envVars:
+      - key: PINEGUARD_API_BASE_URL
+        value: https://pineguard-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

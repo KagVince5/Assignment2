@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PineGuard Admin Web Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-background" aria-hidden="true">
+      <div class="orb orb-a"></div>
+      <div class="orb orb-b"></div>
+      <div class="orb orb-c"></div>
+      <div class="grid-haze"></div>
+    </div>
+
+    <main class="experience-shell">
+      <section class="login-view glass-shell" data-screen="login">
+        <div class="login-copy">
+          <p class="eyebrow">PineGuard admin</p>
+          <h1>Operational oversight for orchard health, people, and follow-up.</h1>
+          <p class="lede">
+            Built from the project documentation and Figma handoff: a desktop control
+            surface for user access, submitted records, data analysis, and live
+            prototype health.
+          </p>
+          <div class="login-pills">
+            <span>Light mode</span>
+            <span>Liquid glass</span>
+            <span>Johor demo zone</span>
+          </div>
+          <div class="hero-signal">
+            <div>
+              <span class="signal-label">System trust</span>
+              <strong>98.4%</strong>
+            </div>
+            <div>
+              <span class="signal-label">Live node</span>
+              <strong>Online</strong>
+            </div>
+            <div>
+              <span class="signal-label">Active analysis</span>
+              <strong>07 jobs</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-card glass-panel">
+          <div class="card-topline">
+            <span class="status-dot"></span>
+            <span>Secure admin gateway</span>
+          </div>
+          <h2>Sign in to continue</h2>
+          <p class="support-copy">
+            Manage users, records, alerts, and reviews.
+          </p>
+
+          <label class="field-label" for="admin-email">Work email</label>
+          <div class="input-shell">
+            <input id="admin-email" type="email" value="admin@pineguard.local" />
+          </div>
+
+          <label class="field-label" for="admin-password">Password</label>
+          <div class="input-shell">
+            <input id="admin-password" type="password" value="pineapple123" />
+          </div>
+
+          <div class="login-actions">
+            <button class="primary-button" id="enter-admin" type="button">
+              Enter admin dashboard
+            </button>
+          </div>
+
+          <p class="login-feedback" id="login-feedback" role="alert" aria-live="polite"></p>
+
+          <div class="login-footnote">
+            <span>Role model: admin and farmer</span>
+            <span>Session mirrors backend token flow</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-view is-hidden" data-screen="admin">
+        <aside class="sidebar glass-shell">
+          <div class="brand-block">
+            <div class="brand-mark">PG</div>
+            <div>
+              <p class="eyebrow">Administration</p>
+              <h2>PineGuard</h2>
+            </div>
+          </div>
+
+          <nav class="sidebar-nav" aria-label="Admin pages">
+            <button class="nav-item is-active" data-page-target="dashboard">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 11.5 12 4l8 7.5" />
+                  <path d="M6.5 10.5V20h11v-9.5" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>Admin Dashboard</strong>
+                <small>Operational state and drift pressure</small>
+              </span>
+            </button>
+            <button class="nav-item" data-page-target="users">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M15.5 18.5v-1.2a3.3 3.3 0 0 0-3.3-3.3H7.8a3.3 3.3 0 0 0-3.3 3.3v1.2" />
+                  <circle cx="10" cy="8.5" r="3" />
+                  <path d="M17 11.5a2.5 2.5 0 1 0 0-5" />
+                  <path d="M20 18.5v-1a2.8 2.8 0 0 0-2.3-2.8" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>User Management</strong>
+                <small>Roles, onboarding, and account control</small>
+              </span>
+            </button>
+            <button class="nav-item" data-page-target="records">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M7 3.5h7l4 4V20H7z" />
+                  <path d="M14 3.5V8h4" />
+                  <path d="M9.5 12h5" />
+                  <path d="M9.5 15.5h5" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>Submitted Records</strong>
+                <small>Saved scans and activity journal</small>
+              </span>
+            </button>
+            <button class="nav-item" data-page-target="analysis">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 19.5V10" />
+                  <path d="M11 19.5V5.5" />
+                  <path d="M17 19.5V13" />
+                  <path d="M3.5 19.5h17" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>Data Analysis</strong>
+                <small>Sensor trends and AI job performance</small>
+              </span>
+            </button>
+            <button class="nav-item" data-page-target="monitor">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 7.5h16v9H4z" />
+                  <path d="M8 19.5h8" />
+                  <path d="m8.5 13 2-2 2.2 2.2L16 9.5" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>System Monitor</strong>
+                <small>Device, camera, and backend flow</small>
+              </span>
+            </button>
+            <button class="nav-item" data-page-target="settings">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3.25" />
+                  <path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <strong>Settings</strong>
+                <small>Thresholds, sync, and preferences</small>
+              </span>
+            </button>
+          </nav>
+
+          <button class="sidebar-logout glass-panel subtle-panel" id="logout-button" type="button">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M10 6H6.5A2.5 2.5 0 0 0 4 8.5v7A2.5 2.5 0 0 0 6.5 18H10" />
+                <path d="m14 8 4 4-4 4" />
+                <path d="M18 12H9" />
+              </svg>
+            </span>
+            <span class="sidebar-logout-copy">
+              <strong>Logout</strong>
+              <small>Return to admin sign-in</small>
+            </span>
+          </button>
+        </aside>
+
+        <div class="workspace">
+          <header class="topbar glass-shell">
+            <div>
+              <p class="eyebrow">Web administration</p>
+              <h1 id="page-title">Admin Dashboard</h1>
+            </div>
+            <div class="topbar-actions">
+              <div class="capsule muted">
+                <span class="status-dot success"></span>
+                Light mode active
+              </div>
+              <div class="capsule">
+                <span>Last sync</span>
+                <strong id="topbar-last-sync">09:41</strong>
+              </div>
+              <button class="secondary-button compact sync-button" id="refresh-cloud-data-button" type="button">
+                Refresh cloud data
+              </button>
+            </div>
+          </header>
+
+          <div class="page-stack">
+            <section class="page is-active" data-page="dashboard">
+              <div class="dashboard-stage glass-shell">
+                <div class="dashboard-copy">
+                  <p class="eyebrow">Operational overview</p>
+                  <h2>Read the orchard like a live instrument, not a static dashboard.</h2>
+                  <p>
+                    The admin side now prioritises drift, trend, and analysis pressure.
+                    Live readings, recent alerts, and AI scan volume sit in one visual
+                    field so the demo deployment feels supervised rather than merely listed.
+                  </p>
+                  <div class="dashboard-ribbon">
+                    <article>
+                      <span>Temperature</span>
+                      <strong>31.2 deg C</strong>
+                    </article>
+                    <article>
+                      <span>Humidity</span>
+                      <strong>78%</strong>
+                    </article>
+                    <article>
+                      <span>Soil moisture</span>
+                      <strong>28%</strong>
+                    </article>
+                    <article>
+                      <span>pH</span>
+                      <strong>4.8</strong>
+                    </article>
+                  </div>
+                </div>
+
+                <div class="dashboard-lens">
+                  <div class="lens-core glass-panel">
+                    <p class="eyebrow">Live orchard lens</p>
+                    <div class="lens-ring">
+                      <div class="lens-center">
+                        <span>Node health</span>
+                        <strong>68 / 100</strong>
+                      </div>
+                    </div>
+                    <div class="lens-nodes">
+                      <div class="lens-node high">
+                        <span>Drift</span>
+                        <strong>Moisture</strong>
+                      </div>
+                      <div class="lens-node medium">
+                        <span>Pressure</span>
+                        <strong>Queued scans</strong>
+                      </div>
+                      <div class="lens-node cool">
+                        <span>Signal</span>
+                        <strong>ESP32 online</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="dashboard-sidecards">
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Unread alerts</span>
+                      <strong>03</strong>
+                      <small>2 warning, 1 critical</small>
+                    </article>
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Queued analysis</span>
+                      <strong>07</strong>
+                      <small>2 active, 5 completed today</small>
+                    </article>
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Record growth</span>
+                      <strong>18 this week</strong>
+                      <small>Scan and field log activity rising</small>
+                    </article>
+                  </div>
+                </div>
+              </div>
+
+              <div class="content-grid two-column">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Risk drift</p>
+                      <h3>Zone signal composition</h3>
+                    </div>
+                    <span class="capsule">Demo area A</span>
+                  </div>
+                  <div class="signal-columns">
+                    <article>
+                      <span>Soil moisture risk</span>
+                      <div class="signal-bar">
+                        <span class="warm-fill" style="height: 84%"></span>
+                      </div>
+                      <strong>High</strong>
+                    </article>
+                    <article>
+                      <span>pH instability</span>
+                      <div class="signal-bar">
+                        <span class="warning-fill" style="height: 66%"></span>
+                      </div>
+                      <strong>Moderate</strong>
+                    </article>
+                    <article>
+                      <span>Heat stress</span>
+                      <div class="signal-bar">
+                        <span class="cool-fill" style="height: 54%"></span>
+                      </div>
+                      <strong>Watch</strong>
+                    </article>
+                    <article>
+                      <span>Disease activity</span>
+                      <div class="signal-bar">
+                        <span class="accent-fill" style="height: 74%"></span>
+                      </div>
+                      <strong>Elevated</strong>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Priority alerts</p>
+                      <h3>Recent incidents</h3>
+                    </div>
+                    <button class="text-button" data-page-jump="analysis">Open analysis</button>
+                  </div>
+                  <div class="alert-list compact-list">
+                    <article class="alert-item">
+                      <span class="alert-tone critical"></span>
+                      <div>
+                        <strong>Soil moisture below safe range</strong>
+                        <p>Zone Demo A dropped to 28% and triggered a critical threshold.</p>
+                      </div>
+                      <small>1 min</small>
+                    </article>
+                    <article class="alert-item">
+                      <span class="alert-tone warning"></span>
+                      <div>
+                        <strong>pH drift needs review</strong>
+                        <p>Sensor node reports pH 4.8, below the recommended operating band.</p>
+                      </div>
+                      <small>7 min</small>
+                    </article>
+                    <article class="alert-item">
+                      <span class="alert-tone neutral"></span>
+                      <div>
+                        <strong>Follow-up note submitted</strong>
+                        <p>A worker submitted a treatment comment tied to yesterday's heart-rot scan.</p>
+                      </div>
+                      <small>18 min</small>
+                    </article>
+                  </div>
+                </section>
+              </div>
+
+              <div class="content-grid wide-main">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Recent activity</p>
+                      <h3>What changed across people and records</h3>
+                    </div>
+                  </div>
+                  <div class="timeline">
+                    <article>
+                      <span>09:36</span>
+                      <div>
+                        <strong>Admin Lee assigned a follow-up visit</strong>
+                        <p>Record `REC-032` moved from review to scheduled follow-up.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:19</span>
+                      <div>
+                        <strong>New scan result saved by Pak Ahmad</strong>
+                        <p>Confidence 91% for early mealybug wilt symptoms in Demo Zone A.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>08:57</span>
+                      <div>
+                        <strong>Admin role updated for Nur Izzati</strong>
+                        <p>Access changed from farmer to admin to support field review.</p>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module side-module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Quick handoff</p>
+                      <h3>Jump to the active surfaces</h3>
+                    </div>
+                  </div>
+                  <div class="shortcut-list">
+                    <button class="shortcut-card" data-page-jump="users">
+                      <strong>User Management</strong>
+                      <span>Add admin or farmer demo accounts and review role coverage</span>
+                    </button>
+                    <button class="shortcut-card" data-page-jump="analysis">
+                      <strong>Data Analysis</strong>
+                      <span>Sensor trends, scan results, and job throughput</span>
+                    </button>
+                    <button class="shortcut-card" data-page-jump="monitor">
+                      <strong>System Monitor</strong>
+                      <span>Camera freshness, backend routes, and device health</span>
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="page" data-page="users">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">User Management</p>
+                  <h2>Manage admin and farmer access with a data-first demo workflow.</h2>
+                </div>
+                <div class="capsule">Demo onboarding</div>
+              </div>
+
+              <div class="content-grid user-top-grid">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Create user</p>
+                      <h3>Add new admin or farmer</h3>
+                    </div>
+                    <span class="capsule muted">Prototype only</span>
+                  </div>
+                  <div class="preset-actions">
+                    <button class="secondary-button compact preset-button" type="button" data-user-preset="admin">
+                      Add admin
+                    </button>
+                    <button class="secondary-button compact preset-button" type="button" data-user-preset="farmer">
+                      Add farmer
+                    </button>
+                  </div>
+                  <form class="user-form" id="demo-user-form">
+                    <div class="form-grid">
+                      <label class="form-field">
+                        <span class="field-label">Full name</span>
+                        <div class="input-shell">
+                          <input id="demo-user-name" type="text" value="Aisyah Rahman" />
+                        </div>
+                      </label>
+                      <label class="form-field">
+                        <span class="field-label">Work email</span>
+                        <div class="input-shell">
+                          <input id="demo-user-email" type="email" value="aisyah@pineguard.local" />
+                        </div>
+                      </label>
+                      <label class="form-field">
+                        <span class="field-label">Role</span>
+                        <div class="input-shell">
+                          <select id="demo-user-role">
+                            <option value="farmer" selected>Farmer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      </label>
+                      <label class="form-field">
+                        <span class="field-label">Base location</span>
+                        <div class="input-shell">
+                          <input id="demo-user-location" type="text" value="Johor Demo B" />
+                        </div>
+                      </label>
+                    </div>
+                    <label class="form-field">
+                      <span class="field-label">Access note</span>
+                      <div class="input-shell">
+                        <textarea id="demo-user-note">Field review and farmer support for the next trial block.</textarea>
+                      </div>
+                    </label>
+                    <div class="form-submit-row">
+                      <button class="primary-button compact" type="submit">Add demo user</button>
+                      <p class="form-note">
+                        This action posts through the backend when an admin session is active, with local fallback kept only for offline demo use.
+                      </p>
+                    </div>
+                  </form>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Permission model</p>
+                      <h3>Access tiers and current balance</h3>
+                    </div>
+                  </div>
+                  <div class="role-grid">
+                    <article>
+                      <strong>Admin</strong>
+                      <p>Full control over users, system settings, records, and operational oversight.</p>
+                    </article>
+                    <article>
+                      <strong>Farmer</strong>
+                      <p>Submit scans, review alerts, and maintain field activity logs for the monitored block.</p>
+                    </article>
+                  </div>
+                  <div class="mini-kpis">
+                    <article>
+                      <span>Active today</span>
+                      <strong>08</strong>
+                    </article>
+                    <article>
+                      <span>Pending invite</span>
+                      <strong>02</strong>
+                    </article>
+                    <article>
+                      <span>Needs role check</span>
+                      <strong>01</strong>
+                    </article>
+                    <article>
+                      <span>Demo adds</span>
+                      <strong id="demo-user-count">00</strong>
+                    </article>
+                  </div>
+                </section>
+              </div>
+
+              <section class="glass-panel module">
+                <div class="module-head">
+                  <div>
+                    <p class="eyebrow">Directory</p>
+                    <h3>User management table</h3>
+                  </div>
+                  <span class="capsule muted">Local demo state</span>
+                </div>
+                <div class="table-shell">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Farm location</th>
+                        <th>Scope</th>
+                        <th>Last active</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="user-directory-body">
+                      <tr>
+                        <td>Nur Izzati</td>
+                        <td>Admin</td>
+                        <td>Johor Demo A</td>
+                        <td>Record review, task coordination, and approvals</td>
+                        <td>09:18</td>
+                        <td><span class="pill success">Active</span></td>
+                        <td><button class="table-action-button danger" type="button">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td>Pak Ahmad</td>
+                        <td>Farmer</td>
+                        <td>Johor Demo A</td>
+                        <td>Submit scans and activity logs</td>
+                        <td>09:36</td>
+                        <td><span class="pill neutral">Online</span></td>
+                        <td><button class="table-action-button danger" type="button">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td>Vincent Teoh</td>
+                        <td>Admin</td>
+                        <td>HQ oversight</td>
+                        <td>Access control and approvals</td>
+                        <td>09:41</td>
+                        <td><span class="pill accent">Primary</span></td>
+                        <td><button class="table-action-button danger" type="button">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td>Siti Wardah</td>
+                        <td>Farmer</td>
+                        <td>Demo greenhouse</td>
+                        <td>Field observation and treatment notes</td>
+                        <td>Yesterday</td>
+                        <td><span class="pill warning">Check role</span></td>
+                        <td><button class="table-action-button danger" type="button">Remove</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="page" data-page="records">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">Submitted Records</p>
+                  <h2>Browse saved scans and activity logs without leaving the admin workspace.</h2>
+                </div>
+                <div class="filter-pills">
+                  <span class="pill accent">All</span>
+                  <span class="pill">Scan</span>
+                  <span class="pill">Activity</span>
+                  <span class="pill">Needs review</span>
+                </div>
+              </div>
+
+              <div class="content-grid wide-main">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Record stream</p>
+                      <h3>Newest items</h3>
+                    </div>
+                    <button class="text-button" data-page-jump="detail">Open selected record</button>
+                  </div>
+                  <div class="record-list" id="records-stream">
+                    <article class="record-card">
+                      <div>
+                        <p class="record-tag">Scan</p>
+                        <strong>REC-032 - Early mealybug wilt signal</strong>
+                        <p>Submitted by Pak Ahmad with 91% AI confidence and admin review requested.</p>
+                      </div>
+                      <div class="record-meta">
+                        <span>09:19</span>
+                        <span class="pill warning">Needs review</span>
+                      </div>
+                    </article>
+                    <article class="record-card">
+                      <div>
+                        <p class="record-tag">Activity</p>
+                        <strong>REC-031 - Irrigation line adjusted</strong>
+                        <p>Worker note linked to yesterday's low-moisture alert with completed action details.</p>
+                      </div>
+                      <div class="record-meta">
+                        <span>08:44</span>
+                        <span class="pill neutral">Logged</span>
+                      </div>
+                    </article>
+                    <article class="record-card">
+                      <div>
+                        <p class="record-tag">Scan</p>
+                        <strong>REC-029 - Fruit rot follow-up photo</strong>
+                        <p>New image attached after treatment, waiting for admin comparison.</p>
+                      </div>
+                      <div class="record-meta">
+                        <span>Yesterday</span>
+                        <span class="pill success">Assigned</span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module side-module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Mix</p>
+                      <h3>Journal split</h3>
+                    </div>
+                  </div>
+                  <div class="distribution">
+                    <div class="distribution-bar">
+                      <span class="scan" style="width: 56%"></span>
+                      <span class="activity" style="width: 28%"></span>
+                      <span class="note" style="width: 16%"></span>
+                    </div>
+                    <ul id="records-mix-list">
+                      <li><strong>56%</strong> scan records</li>
+                      <li><strong>28%</strong> activity logs</li>
+                      <li><strong>16%</strong> admin notes</li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="page" data-page="detail">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">Record Detail</p>
+                  <h2 id="detail-record-title">REC-032 - review the diagnosis, environment, and follow-up context.</h2>
+                </div>
+                <button class="primary-button compact" data-page-jump="analysis">
+                  Open analysis view
+                </button>
+              </div>
+
+              <div class="content-grid detail-layout">
+                <section class="glass-panel module image-module">
+                  <div class="image-stage" id="detail-image-stage">
+                    <div class="image-placeholder" id="detail-image-placeholder">
+                      <span id="detail-image-caption">Leaf capture</span>
+                      <strong id="detail-image-label">Early mealybug wilt</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Diagnosis summary</p>
+                      <h3>AI result and treatment guidance</h3>
+                    </div>
+                    <span class="pill warning" id="detail-confidence-pill">91% confidence</span>
+                  </div>
+                  <div class="summary-list" id="detail-summary-list">
+                    <article>
+                      <span>Predicted condition</span>
+                      <strong id="detail-predicted-condition">Mealybug wilt - early stage</strong>
+                    </article>
+                    <article>
+                      <span>Suggested action</span>
+                      <strong id="detail-suggested-action">Inspect crown area and isolate affected plant cluster</strong>
+                    </article>
+                    <article>
+                      <span>Reviewer note</span>
+                      <strong id="detail-reviewer-note">Admin confirmation requested before treatment escalation</strong>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Environment context</p>
+                      <h3>Latest linked sensor snapshot</h3>
+                    </div>
+                  </div>
+                  <div class="mini-kpis" id="detail-environment-kpis">
+                    <article>
+                      <span>Temperature</span>
+                      <strong id="detail-temperature">31.2 deg C</strong>
+                    </article>
+                    <article>
+                      <span>Humidity</span>
+                      <strong id="detail-humidity">78%</strong>
+                    </article>
+                    <article>
+                      <span>Soil moisture</span>
+                      <strong id="detail-soil-moisture">28%</strong>
+                    </article>
+                    <article>
+                      <span>pH</span>
+                      <strong id="detail-ph">4.8</strong>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Review thread</p>
+                      <h3>Assignment and commentary</h3>
+                    </div>
+                  </div>
+                  <div class="timeline" id="detail-review-thread">
+                    <article>
+                      <span>09:20</span>
+                      <div>
+                        <strong>Pak Ahmad submitted scan</strong>
+                        <p>Requested an admin check after noticing curling and yellowing around the leaf edge.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:24</span>
+                      <div>
+                        <strong>System linked latest moisture alert</strong>
+                        <p>Low soil moisture was attached to the record for added environmental context.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:31</span>
+                      <div>
+                        <strong>Admin review still pending</strong>
+                        <p>The item remains flagged in the analysis board until the next field check window.</p>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="page" data-page="analysis">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">Data Analysis</p>
+                  <h2>Review sensor drift and AI job output as one analytical surface.</h2>
+                </div>
+                <div class="capsule muted">History + inference</div>
+              </div>
+
+              <div class="analysis-stage glass-shell">
+                <div class="analysis-story">
+                  <p class="eyebrow">Trend narrative</p>
+                  <h3>Moisture stress rises first, then scan volume follows.</h3>
+                  <p>
+                    The documentation says the system must preserve recent readings for
+                    trend review and support queued image analysis. This page combines
+                    those two stories so the admin can see whether disease-related scans
+                    are reacting to sensor drift or appearing independently.
+                  </p>
+                </div>
+                  <div class="analysis-stage-cards">
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Completed jobs today</span>
+                      <strong id="analysis-completed-jobs">05</strong>
+                      <small id="analysis-completed-note">Average turnaround 2m 14s</small>
+                    </article>
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Top predicted class</span>
+                      <strong id="analysis-top-class">Mealybug wilt</strong>
+                      <small id="analysis-top-class-note">3 of 5 completed jobs</small>
+                    </article>
+                    <article class="glass-panel dashboard-mini-card">
+                      <span>Sensor-trigger overlap</span>
+                      <strong id="analysis-overlap-rate">72%</strong>
+                      <small id="analysis-overlap-note">Most flagged scans followed low-moisture drift</small>
+                    </article>
+                  </div>
+              </div>
+
+              <div class="content-grid analysis-grid">
+                <section class="glass-panel module analysis-submit-module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">AI image import</p>
+                      <h3>Submit a plant image for diagnosis</h3>
+                    </div>
+                    <span class="pill neutral" id="analysis-submit-state">Ready</span>
+                  </div>
+                  <form class="analysis-submit-form" id="analysis-submit-form">
+                    <label class="form-field">
+                      <span class="field-label">Image file</span>
+                      <div class="input-shell">
+                        <input id="analysis-image-input" type="file" accept="image/*" />
+                      </div>
+                    </label>
+                    <div class="analysis-actions">
+                      <button class="primary-button compact" id="analysis-submit-button" type="submit">
+                        Analyze imported image
+                      </button>
+                      <button class="secondary-button compact" id="analysis-latest-frame-button" type="button">
+                        Analyze latest ESP32 frame
+                      </button>
+                    </div>
+                    <p class="form-note" id="analysis-upload-note">
+                      The backend sends the selected image and latest sensor context to the AI queue, then returns the disease status and treatment guidance.
+                    </p>
+                  </form>
+                  <div class="analysis-result-card" id="analysis-result-card">
+                    <span id="analysis-result-status">Waiting for image</span>
+                    <strong id="analysis-result-disease">No diagnosis yet</strong>
+                    <p id="analysis-result-confidence">Import an image to start a new AI job.</p>
+                    <small id="analysis-result-advice">Result status will appear here after the backend finishes processing.</small>
+                  </div>
+                </section>
+
+                <section class="glass-panel module chart-module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Sensor history</p>
+                      <h3>24 hour signal overlay</h3>
+                    </div>
+                  </div>
+                  <div class="chart-board">
+                    <div class="chart-axis">
+                      <span>Critical</span>
+                      <span>Watch</span>
+                      <span>Stable</span>
+                    </div>
+                    <div class="chart-layers">
+                      <div class="trend-line moisture">
+                        <span style="height: 76%"></span>
+                        <span style="height: 68%"></span>
+                        <span style="height: 62%"></span>
+                        <span style="height: 54%"></span>
+                        <span style="height: 45%"></span>
+                        <span style="height: 40%"></span>
+                        <span style="height: 34%"></span>
+                      </div>
+                      <div class="trend-line humidity">
+                        <span style="height: 52%"></span>
+                        <span style="height: 56%"></span>
+                        <span style="height: 58%"></span>
+                        <span style="height: 60%"></span>
+                        <span style="height: 63%"></span>
+                        <span style="height: 66%"></span>
+                        <span style="height: 70%"></span>
+                      </div>
+                      <div class="trend-line ph">
+                        <span style="height: 64%"></span>
+                        <span style="height: 60%"></span>
+                        <span style="height: 58%"></span>
+                        <span style="height: 56%"></span>
+                        <span style="height: 48%"></span>
+                        <span style="height: 45%"></span>
+                        <span style="height: 42%"></span>
+                      </div>
+                    </div>
+                    <div class="chart-legend">
+                      <span><i class="legend moisture"></i> Soil moisture</span>
+                      <span><i class="legend humidity"></i> Humidity</span>
+                      <span><i class="legend ph"></i> pH trend</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">AI job pipeline</p>
+                      <h3>Analysis throughput</h3>
+                    </div>
+                  </div>
+                  <div class="queue-stack">
+                    <article>
+                      <strong>Queued</strong>
+                      <p id="analysis-queue-waiting">02 jobs waiting for local Ollama processing after upload.</p>
+                    </article>
+                    <article>
+                      <strong>Running</strong>
+                      <p id="analysis-queue-running">01 active job with fresh sensor context attached to the record.</p>
+                    </article>
+                    <article>
+                      <strong>Completed</strong>
+                      <p id="analysis-queue-completed">05 jobs closed today with structured diagnosis and treatment guidance.</p>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Prediction spread</p>
+                      <h3>Latest disease classes</h3>
+                    </div>
+                  </div>
+                  <div class="distribution">
+                    <div class="distribution-bar">
+                      <span class="scan" style="width: 48%"></span>
+                      <span class="activity" style="width: 32%"></span>
+                      <span class="note" style="width: 20%"></span>
+                    </div>
+                    <ul id="analysis-prediction-spread">
+                      <li><strong>48%</strong> mealybug wilt</li>
+                      <li><strong>32%</strong> healthy with stress context</li>
+                      <li><strong>20%</strong> fruit rot follow-up</li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Correlation log</p>
+                      <h3>Linked events</h3>
+                    </div>
+                  </div>
+                  <div class="timeline compact-timeline" id="analysis-correlation-log">
+                    <article>
+                      <span>07:20</span>
+                      <div>
+                        <strong>Moisture begins downward drift</strong>
+                        <p>Soil moisture falls below the preferred operating band for Demo Area A.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>08:55</span>
+                      <div>
+                        <strong>pH instability adds warning pressure</strong>
+                        <p>The node shifts toward acidic stress and the dashboard risk score rises.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:19</span>
+                      <div>
+                        <strong>Leaf scan submitted</strong>
+                        <p>AI returns early mealybug wilt with sensor health score attached.</p>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="page" data-page="monitor">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">System Monitor</p>
+                  <h2>Check the health of sensor, camera, backend, and alert flow from one operations page.</h2>
+                </div>
+                <div class="capsule muted">Diagnostics view</div>
+              </div>
+
+              <div class="content-grid monitor-top-grid">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Pipeline health</p>
+                      <h3>Current service posture</h3>
+                    </div>
+                    <span class="capsule">Stable</span>
+                  </div>
+                  <div class="monitor-health-grid">
+                    <article>
+                      <span>Backend API</span>
+                      <strong id="monitor-backend-status">Healthy</strong>
+                      <small id="monitor-backend-note">Auth, alerts, records, and analysis routes reachable</small>
+                    </article>
+                    <article>
+                      <span>Sensor node</span>
+                      <strong id="monitor-node-status">Fresh</strong>
+                      <small id="monitor-node-note">Latest reading received 1 minute ago</small>
+                    </article>
+                    <article>
+                      <span>ESP32-CAM</span>
+                      <strong id="monitor-camera-status">Online</strong>
+                      <small id="monitor-camera-note">Latest frame uploaded at 09:39</small>
+                    </article>
+                    <article>
+                      <span>Alert engine</span>
+                      <strong id="monitor-alert-status">Running</strong>
+                      <small id="monitor-alert-note">Threshold evaluation active for current demo node</small>
+                    </article>
+                  </div>
+                </section>
+
+              </div>
+
+              <div class="content-grid two-column">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Interface map</p>
+                      <h3>Critical endpoints</h3>
+                    </div>
+                  </div>
+                  <div class="endpoint-list">
+                    <article class="endpoint-row">
+                      <div>
+                        <strong>GET /api/sensor-readings/latest</strong>
+                        <p>Used by the monitoring surface for current environmental values.</p>
+                      </div>
+                      <span class="pill success">Healthy</span>
+                    </article>
+                    <article class="endpoint-row">
+                      <div>
+                        <strong>GET /api/camera-frames/latest</strong>
+                        <p>Supplies the latest field image from the ESP32-CAM upload flow.</p>
+                      </div>
+                      <span class="pill neutral">Fresh</span>
+                    </article>
+                    <article class="endpoint-row">
+                      <div>
+                        <strong>POST /api/analysis-jobs</strong>
+                        <p>Queues a plant image for local Ollama processing and later polling.</p>
+                      </div>
+                      <span class="pill accent">Active</span>
+                    </article>
+                    <article class="endpoint-row">
+                      <div>
+                        <strong>GET /api/alerts</strong>
+                        <p>Returns threshold-based notifications for operator review.</p>
+                      </div>
+                      <span class="pill success">Healthy</span>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Freshness log</p>
+                      <h3>Recent system events</h3>
+                    </div>
+                  </div>
+                  <div class="timeline compact-timeline" id="monitor-freshness-log">
+                    <article>
+                      <span>09:41</span>
+                      <div>
+                        <strong>Session heartbeat refreshed</strong>
+                        <p>Admin workspace received the latest backend sync timestamp.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:39</span>
+                      <div>
+                        <strong>Camera frame stored</strong>
+                        <p>ESP32-CAM pushed a new frame into the backend uploads path.</p>
+                      </div>
+                    </article>
+                    <article>
+                      <span>09:18</span>
+                      <div>
+                        <strong>Alert threshold evaluated</strong>
+                        <p>Moisture and pH warning states were recalculated for the active node.</p>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="page" data-page="settings">
+              <div class="section-intro glass-shell">
+                <div>
+                  <p class="eyebrow">Settings</p>
+                  <h2>Set the live rules used by the web, mobile, and hardware flow.</h2>
+                </div>
+                <div class="capsule muted">Configuration surface</div>
+              </div>
+
+              <div class="content-grid settings-grid">
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Monitoring thresholds</p>
+                      <h3>Sensor rules</h3>
+                    </div>
+                  </div>
+                  <div class="settings-list">
+                    <article class="setting-row">
+                      <div>
+                        <strong>Soil moisture alert floor</strong>
+                        <p>Warning threshold</p>
+                      </div>
+                      <label class="setting-control" for="settings-soil-dry-input">
+                        <input class="setting-input" id="settings-soil-dry-input" type="number" min="0" max="100" step="1" value="30" />
+                        <span>%</span>
+                      </label>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>pH lower band</strong>
+                        <p>Minimum healthy pH</p>
+                      </div>
+                      <label class="setting-control" for="settings-ph-low-input">
+                        <input class="setting-input" id="settings-ph-low-input" type="number" min="0" max="6.5" step="0.1" value="4.5" />
+                      </label>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Temperature watch point</strong>
+                        <p>High temperature alert</p>
+                      </div>
+                      <label class="setting-control" for="settings-temp-high-input">
+                        <input class="setting-input" id="settings-temp-high-input" type="number" min="16" max="80" step="1" value="35" />
+                        <span>deg C</span>
+                      </label>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Sync and AI</p>
+                      <h3>Backend controls</h3>
+                    </div>
+                  </div>
+                  <div class="settings-list">
+                    <article class="setting-row">
+                      <div>
+                        <strong>Polling cadence</strong>
+                        <p>Dashboard refresh</p>
+                      </div>
+                      <select class="setting-select" id="settings-sync-cadence-input">
+                        <option value="realtime">Realtime</option>
+                        <option value="30s">30 sec</option>
+                        <option value="60s">60 sec</option>
+                        <option value="hourly">Hourly</option>
+                      </select>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Analysis mode</strong>
+                        <p>Current routing</p>
+                      </div>
+                      <span class="pill accent" id="settings-analysis-mode">Local + relay</span>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Backend URL</strong>
+                        <p>Active API endpoint</p>
+                      </div>
+                      <span class="pill neutral" id="settings-backend-url">192.168.0.24</span>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Notifications</p>
+                      <h3>Operator visibility</h3>
+                    </div>
+                  </div>
+                  <div class="settings-list">
+                    <article class="setting-row">
+                      <div>
+                        <strong>Critical alerts</strong>
+                        <p>High-risk events</p>
+                      </div>
+                      <label class="switch-control" aria-label="Critical alerts">
+                        <input id="settings-critical-alerts-input" type="checkbox" checked />
+                        <span></span>
+                      </label>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Analysis completion notices</strong>
+                        <p>Scan results</p>
+                      </div>
+                      <label class="switch-control" aria-label="Analysis completion notices">
+                        <input id="settings-analysis-notices-input" type="checkbox" checked />
+                        <span></span>
+                      </label>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Digest summary</strong>
+                        <p>Daily recap</p>
+                      </div>
+                      <label class="switch-control" aria-label="Digest summary">
+                        <input id="settings-digest-summary-input" type="checkbox" checked />
+                        <span></span>
+                      </label>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="glass-panel module">
+                  <div class="module-head">
+                    <div>
+                      <p class="eyebrow">Session and storage</p>
+                      <h3>Admin controls</h3>
+                    </div>
+                  </div>
+                  <div class="settings-list">
+                    <article class="setting-row">
+                      <div>
+                        <strong>Session timeout</strong>
+                        <p>Login window</p>
+                      </div>
+                      <span class="pill neutral" id="settings-session-timeout">8 hours</span>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Record retention target</strong>
+                        <p>Stored history</p>
+                      </div>
+                      <span class="pill accent">180 days</span>
+                    </article>
+                    <article class="setting-row">
+                      <div>
+                        <strong>Config status</strong>
+                        <p>Database status</p>
+                      </div>
+                      <span class="pill warning" id="settings-config-status">Demo only</span>
+                    </article>
+                  </div>
+                  <div class="settings-actions">
+                    <button class="primary-button compact" id="save-settings-button" type="button">Save settings</button>
+                    <button class="secondary-button compact" id="reset-settings-button" type="button">Reset defaults</button>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="confirm-dialog" id="remove-user-dialog">
+      <form class="confirm-dialog-card" id="remove-user-form" method="dialog">
+        <p class="eyebrow">Protected action</p>
+        <h3 id="remove-user-title">Remove user</h3>
+        <p id="remove-user-message">
+          Enter the current admin password to remove this user from active access.
+        </p>
+        <label class="field-label" for="remove-user-password">Admin password</label>
+        <div class="input-shell">
+          <input
+            id="remove-user-password"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-button compact" id="cancel-remove-user" type="button">
+            Cancel
+          </button>
+          <button class="primary-button compact danger" id="confirm-remove-user" type="submit">
+            Remove user
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./pineguard-api-config.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
