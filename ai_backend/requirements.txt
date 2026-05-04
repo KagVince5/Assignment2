@@ -4,3 +4,4 @@ requests
 uvicorn
 sqlalchemy
 PyMySQL
+a2wsgi
