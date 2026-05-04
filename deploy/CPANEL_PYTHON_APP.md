@@ -21,10 +21,12 @@ Application entry point: application
 Python version: 3.11 if available
 ```
 
-Upload these files into the application root:
+Upload the contents of `ai_backend/` into the application root so
+`passenger_wsgi.py`, `ollama_backend.py`, `db.py`, and `requirements.txt` sit
+directly inside the cPanel Python app folder:
 
 ```text
-ai_backend/
+pineguard-api/
   __init__.py
   db.py
   ollama_backend.py
@@ -35,7 +37,7 @@ ai_backend/
 Install dependencies from cPanel's Python app page or terminal:
 
 ```bash
-pip install -r ai_backend/requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Environment Variables
@@ -86,3 +88,19 @@ Expected `/health` shape:
   "analysisLayer": "remote_ai_backend"
 }
 ```
+
+## Build Upload Zip Locally
+
+From the project root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\build_cpanel_python_app.ps1
+```
+
+This creates:
+
+```text
+tmp/pineguard-cpanel-python-app.zip
+```
+
+Upload and extract that zip into the cPanel Python app root.
