@@ -42,6 +42,27 @@ Invoke-RestMethod "$api/health"
 Invoke-RestMethod "$api/api/auth/login" -Method Post -ContentType "application/json" -Body '{"email":"admin@pineguard.local","password":"pineapple123"}'
 ```
 
+## cPanel Remote MySQL Access
+
+If Render logs show MySQL error 1045 for a Render hostname such as:
+
+```text
+Access denied for user 'mytrusth_pgapp'@'ip-74-220-52-251.singapore-egress.render.com'
+```
+
+authorize the Render outbound host in cPanel Remote Database Access. You can use
+the cPanel UI, or run the helper with a cPanel API token:
+
+```powershell
+$env:CPANEL_API_TOKEN = "YOUR_CPANEL_API_TOKEN"
+powershell -ExecutionPolicy Bypass -File .\deploy\authorize_cpanel_remote_mysql_host.ps1 `
+  -CpanelHost servernew.syokdc.com `
+  -CpanelUser mytrusth `
+  -RemoteHost 74.220.52.251
+```
+
+Then redeploy `pineguard-api` on Render.
+
 For mobile builds, pass the same cloud API:
 
 ```powershell
