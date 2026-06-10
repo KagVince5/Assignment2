@@ -356,6 +356,7 @@ const WEB_MS_EXACT = {
   "Reviewer note": "Nota penyemak",
   "Image unavailable": "Imej tidak tersedia",
   "Stored preview": "Pratonton tersimpan",
+  "Generated preview": "Pratonton dijana",
   "Remove": "Buang",
   "Remove record": "Buang rekod",
   "Treatment": "Rawatan",
@@ -1179,6 +1180,47 @@ function recordImageUrl(record) {
   return recordImageSources(record)[0] || "";
 }
 
+function escapeSvgText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function recordFallbackImageDataUri(record) {
+  if (!record) {
+    return "";
+  }
+  const scanResult = recordScanResult(record);
+  const title = escapeSvgText(recordTitle(record) || "PineGuard record");
+  const diagnosis = escapeSvgText(
+    scanResult.diseaseDisplayName || diseaseDisplayName(scanResult.disease || record.type || "record"),
+  );
+  const type = escapeSvgText(String(record.type || "record").toUpperCase());
+  const confidence = formatConfidencePercent(scanResult.confidence) || "Record preview";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#eff8f2"/>
+          <stop offset="55%" stop-color="#dfeee7"/>
+          <stop offset="100%" stop-color="#f9f6ec"/>
+        </linearGradient>
+      </defs>
+      <rect width="640" height="420" rx="44" fill="url(#bg)"/>
+      <circle cx="520" cy="96" r="74" fill="#c9e6d6" opacity=".55"/>
+      <circle cx="114" cy="332" r="92" fill="#dbe7ff" opacity=".42"/>
+      <rect x="54" y="54" width="532" height="312" rx="34" fill="#ffffff" opacity=".72"/>
+      <text x="88" y="126" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="4" fill="#2b6d5a">${type}</text>
+      <text x="88" y="190" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#142f29">${diagnosis}</text>
+      <text x="88" y="246" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#5d756d">${title}</text>
+      <text x="88" y="304" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#2d6b5b">${escapeSvgText(confidence)}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function recordImageSources(record) {
   const scanResult = recordScanResult(record);
   const candidates = [
@@ -1189,6 +1231,7 @@ function recordImageSources(record) {
     scanResult.imagePreviewDataUri,
     scanResult.imageDataUri,
     record?.imagePreviewDataUri,
+    recordFallbackImageDataUri(record),
   ];
   const normalized = [];
   candidates.forEach((value) => {
@@ -1206,6 +1249,9 @@ function recordImageSourceLabel(record) {
     return record?.type === "scan" ? "Image pending" : "No scan image";
   }
   if (imageUrl.startsWith("data:image/")) {
+    if (imageUrl.startsWith("data:image/svg+xml")) {
+      return translateWebTextNodeValue("Generated preview");
+    }
     return translateWebTextNodeValue("Stored preview");
   }
   if (imageUrl.includes("/camera/") || imageUrl.includes("camera")) {
