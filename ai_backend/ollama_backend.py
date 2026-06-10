@@ -11,6 +11,7 @@ This service combines:
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import ipaddress
 import json
@@ -124,6 +125,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
 BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
+IMAGE_PREVIEW_MAX_CHARS = int(os.getenv("IMAGE_PREVIEW_MAX_CHARS", "60000"))
 # CPU-only Gemma 4 inference can take longer than a quick health probe.
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "180"))
 AI_LAYER_BASE_URL = os.getenv("AI_LAYER_BASE_URL", "").rstrip("/")
@@ -1008,6 +1010,35 @@ def public_or_stored_upload_url(
     return public_upload_url(relative_path or stored_relative_path, request)
 
 
+def clean_image_preview_data_uri(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    preview = value.strip()
+    if not preview or len(preview) > IMAGE_PREVIEW_MAX_CHARS:
+        return None
+    header, separator, encoded = preview.partition(",")
+    header = header.lower()
+    if separator != "," or not header.startswith("data:image/"):
+        return None
+    if ";base64" not in header:
+        return None
+    try:
+        base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    return preview
+
+
+def image_preview_data_uri_from_bytes(
+    image_bytes: bytes, content_type: str | None = "image/jpeg"
+) -> str | None:
+    mime_type = (content_type or "image/jpeg").split(";", 1)[0].strip().lower()
+    if not mime_type.startswith("image/"):
+        mime_type = "image/jpeg"
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return clean_image_preview_data_uri(f"data:{mime_type};base64,{encoded}")
+
+
 def backend_discovery_urls(request: Request | None = None) -> list[str]:
     candidates: list[str] = []
 
@@ -1237,11 +1268,18 @@ def normalize_scan_result_payload(
         return None
 
     normalized = payload.copy()
-    image_uri = normalized.get("imageUri")
-    if isinstance(image_uri, str) and is_local_url(image_uri):
+    for key in ("imageUri", "imageUrl", "image_url"):
+        image_uri = normalized.get(key)
+        if not isinstance(image_uri, str) or not image_uri.strip():
+            continue
         normalized_uri = public_or_stored_upload_url(image_uri, None, request)
         if normalized_uri:
-            normalized["imageUri"] = normalized_uri
+            normalized[key] = normalized_uri
+    preview_data_uri = clean_image_preview_data_uri(
+        normalized.get("imagePreviewDataUri") or normalized.get("imageDataUri")
+    )
+    if preview_data_uri:
+        normalized["imagePreviewDataUri"] = preview_data_uri
     return normalized
 
 
@@ -2866,9 +2904,12 @@ def analyze_image_bytes_optional(
 
 
 def build_scan_result_payload(
-    image_uri: str | None, result: dict[str, Any]
+    image_uri: str | None,
+    result: dict[str, Any],
+    *,
+    image_preview_data_uri: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "imageUri": image_uri,
         "disease": result["disease"],
         "confidence": result["confidence"],
@@ -2881,6 +2922,10 @@ def build_scan_result_payload(
         "treatment": result["treatment"],
         "timestamp": int(time.time() * 1000),
     }
+    preview_data_uri = clean_image_preview_data_uri(image_preview_data_uri)
+    if preview_data_uri:
+        payload["imagePreviewDataUri"] = preview_data_uri
+    return payload
 
 
 def ollama_tags() -> dict[str, Any]:
@@ -3208,6 +3253,7 @@ async def analyze(
 ) -> dict[str, Any]:
     image_bytes: bytes | None = None
     image_uri = ""
+    image_preview_data_uri: str | None = None
     sensor_reading: dict[str, float] | None = None
     session_id = ""
     live_mode = False
@@ -3219,6 +3265,10 @@ async def analyze(
         sensor_reading = normalize_sensor_reading(
             parse_json_value(payload.get("sensor_reading"))
         )
+        image_preview_data_uri = clean_image_preview_data_uri(
+            payload.get("image_preview_data_uri")
+            or payload.get("imagePreviewDataUri")
+        )
         session_id = str(payload.get("session_id") or "").strip()
         live_mode = bool(payload.get("live_mode"))
         if not image_url:
@@ -3226,6 +3276,8 @@ async def analyze(
                 status_code=400, detail="Missing image_url in JSON request"
             )
         image_bytes = fetch_image_from_url(image_url)
+        if not image_preview_data_uri:
+            image_preview_data_uri = image_preview_data_uri_from_bytes(image_bytes)
         image_uri = image_url
     else:
         form = await request.form()
@@ -3233,6 +3285,9 @@ async def analyze(
         image_url = str(form.get("image_url") or "").strip()
         sensor_reading = normalize_sensor_reading(
             parse_json_value(form.get("sensor_reading"))
+        )
+        image_preview_data_uri = clean_image_preview_data_uri(
+            form.get("image_preview_data_uri") or form.get("imagePreviewDataUri")
         )
         session_id = str(form.get("session_id") or "").strip()
         live_mode = str(form.get("live_mode") or "").strip().lower() in {
@@ -3245,9 +3300,15 @@ async def analyze(
         if upload is not None and hasattr(upload, "read"):
             image_bytes = await upload.read()
             validate_image_bytes(image_bytes)
+            if not image_preview_data_uri:
+                image_preview_data_uri = image_preview_data_uri_from_bytes(
+                    image_bytes, getattr(upload, "content_type", "image/jpeg")
+                )
             image_uri = getattr(upload, "filename", "uploaded-image")
         elif image_url:
             image_bytes = fetch_image_from_url(image_url)
+            if not image_preview_data_uri:
+                image_preview_data_uri = image_preview_data_uri_from_bytes(image_bytes)
             image_uri = image_url
         else:
             raise HTTPException(
@@ -3264,7 +3325,9 @@ async def analyze(
     meta["liveMode"] = live_mode
     meta["sessionId"] = session_id or None
 
-    scan_result = build_scan_result_payload(image_uri, result)
+    scan_result = build_scan_result_payload(
+        image_uri, result, image_preview_data_uri=image_preview_data_uri
+    )
     response_payload = {
         "status": "ok",
         "scanResult": scan_result,
@@ -3327,11 +3390,21 @@ def process_analysis_job(job_id: str) -> None:
             )
 
             image_uri = job.image_uri or public_upload_url(job.image_path)
-            scan_result = build_scan_result_payload(image_uri, result)
+            job_meta = safe_json_loads(job.meta_json) or {}
+            image_preview_data_uri = job_meta.get(
+                "imagePreviewDataUri"
+            ) or image_preview_data_uri_from_bytes(image_bytes)
+            scan_result = build_scan_result_payload(
+                image_uri,
+                result,
+                image_preview_data_uri=image_preview_data_uri,
+            )
             meta["liveMode"] = job.live_mode
             meta["sessionId"] = job.session_id
             meta.setdefault("reviewPath", None)
             meta["transport"] = job.transport
+            if scan_result.get("imagePreviewDataUri"):
+                meta["imagePreviewStored"] = True
 
             job.status = "done"
             job.scan_result_json = json.dumps(scan_result)
@@ -3622,6 +3695,7 @@ async def upload_camera_frame(
             .limit(1)
         )
         analysis_job_id = str(uuid4())
+        image_preview_data_uri = image_preview_data_uri_from_bytes(image_bytes)
         db.add(
             AnalysisJob(
                 id=analysis_job_id,
@@ -3638,6 +3712,11 @@ async def upload_camera_frame(
                 session_id=f"esp32-{int(time.time() * 1000)}",
                 live_mode=True,
                 transport="esp32_camera_auto_analysis",
+                meta_json=json.dumps(
+                    {"imagePreviewDataUri": image_preview_data_uri}
+                )
+                if image_preview_data_uri
+                else None,
                 created_at=utcnow(),
                 updated_at=utcnow(),
             )
@@ -3836,6 +3915,7 @@ async def create_analysis_job(
 ) -> dict[str, Any]:
     image_uri: str | None = None
     image_path: str | None = None
+    image_preview_data_uri: str | None = None
     sensor_payload: dict[str, Any] | None = None
     session_id = ""
     live_mode = False
@@ -3844,6 +3924,10 @@ async def create_analysis_job(
     if content_type.startswith("application/json"):
         payload = await request.json()
         image_uri = str(payload.get("image_url") or "").strip() or None
+        image_preview_data_uri = clean_image_preview_data_uri(
+            payload.get("image_preview_data_uri")
+            or payload.get("imagePreviewDataUri")
+        )
         sensor_payload = parse_json_value(payload.get("sensor_reading"))
         request_node_id = str(
             payload.get("node_id") or payload.get("nodeId") or ""
@@ -3854,6 +3938,9 @@ async def create_analysis_job(
         form = await request.form()
         upload = form.get("image")
         image_uri = str(form.get("image_url") or "").strip() or None
+        image_preview_data_uri = clean_image_preview_data_uri(
+            form.get("image_preview_data_uri") or form.get("imagePreviewDataUri")
+        )
         sensor_payload = parse_json_value(form.get("sensor_reading"))
         request_node_id = str(form.get("node_id") or form.get("nodeId") or "").strip()
         session_id = str(form.get("session_id") or "").strip()
@@ -3867,6 +3954,10 @@ async def create_analysis_job(
         if upload is not None and hasattr(upload, "read"):
             image_bytes = await upload.read()
             validate_image_bytes(image_bytes)
+            if not image_preview_data_uri:
+                image_preview_data_uri = image_preview_data_uri_from_bytes(
+                    image_bytes, getattr(upload, "content_type", "image/jpeg")
+                )
             image_path, image_uri = save_upload_bytes(
                 image_bytes, "analysis_jobs", request=request
             )
@@ -3894,6 +3985,9 @@ async def create_analysis_job(
         session_id=session_id or None,
         live_mode=live_mode,
         transport="backend_queue",
+        meta_json=json.dumps({"imagePreviewDataUri": image_preview_data_uri})
+        if image_preview_data_uri
+        else None,
         created_at=utcnow(),
         updated_at=utcnow(),
     )

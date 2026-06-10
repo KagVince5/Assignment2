@@ -465,6 +465,13 @@ span {
   padding: 0.8rem 1rem;
 }
 
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
 .admin-view {
   width: min(1480px, 100%);
   display: grid;
@@ -1433,6 +1440,17 @@ span {
   justify-content: flex-start;
 }
 
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.record-remove-button {
+  min-height: 2rem;
+  padding-inline: 0.7rem;
+}
+
 .timeline article {
   display: grid;
   grid-template-columns: 5rem minmax(0, 1fr);
@@ -1595,7 +1613,8 @@ td {
 }
 
 .table-action-button.danger,
-.primary-button.danger {
+.primary-button.danger,
+.secondary-button.danger {
   color: #fff8f7;
   background:
     linear-gradient(180deg, rgba(226, 92, 84, 0.9), rgba(178, 62, 58, 0.92)),

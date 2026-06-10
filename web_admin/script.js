@@ -69,6 +69,7 @@ const recordsStream = document.getElementById("records-stream");
 const recordsMixList = document.getElementById("records-mix-list");
 const recordFilterButtons = Array.from(document.querySelectorAll("[data-record-filter]"));
 const openSelectedRecordButton = document.getElementById("open-selected-record-button");
+const detailRemoveRecordButton = document.getElementById("detail-remove-record-button");
 const detailRecordTitle = document.getElementById("detail-record-title");
 const detailImageStage = document.getElementById("detail-image-stage");
 const detailImage = document.getElementById("detail-image");
@@ -354,6 +355,9 @@ const WEB_MS_EXACT = {
   "Suggested action": "Tindakan dicadangkan",
   "Reviewer note": "Nota penyemak",
   "Image unavailable": "Imej tidak tersedia",
+  "Stored preview": "Pratonton tersimpan",
+  "Remove": "Buang",
+  "Remove record": "Buang rekod",
   "Treatment": "Rawatan",
   "Recommendation": "Cadangan",
   "Description": "Penerangan",
@@ -462,6 +466,9 @@ const LIVE_VALUE_SHELL_CLASS = "has-live-update";
 const API_DISCOVERY_TIMEOUT_MS = 2500;
 const API_UPLOAD_TIMEOUT_MS = 30000;
 const API_HEALTH_TIMEOUT_MS = 8000;
+const RECORD_IMAGE_PREVIEW_MAX_EDGE = 420;
+const RECORD_IMAGE_PREVIEW_MAX_CHARS = 60000;
+const RECORD_IMAGE_PREVIEW_QUALITY = 0.72;
 const verifiedDatabaseApiBaseUrls = new Set();
 const rejectedDatabaseApiBaseUrls = new Set();
 
@@ -1169,21 +1176,37 @@ function alertMessage(alert) {
 }
 
 function recordImageUrl(record) {
+  return recordImageSources(record)[0] || "";
+}
+
+function recordImageSources(record) {
   const scanResult = recordScanResult(record);
   const candidates = [
     scanResult.imageUri,
     scanResult.imageUrl,
     scanResult.image_url,
     record?.imageUrl,
+    scanResult.imagePreviewDataUri,
+    scanResult.imageDataUri,
+    record?.imagePreviewDataUri,
   ];
-  const match = candidates.find((value) => typeof value === "string" && value.trim());
-  return match ? match.trim() : "";
+  const normalized = [];
+  candidates.forEach((value) => {
+    const source = typeof value === "string" ? value.trim() : "";
+    if (source && !normalized.includes(source)) {
+      normalized.push(source);
+    }
+  });
+  return normalized;
 }
 
 function recordImageSourceLabel(record) {
   const imageUrl = recordImageUrl(record).toLowerCase();
   if (!imageUrl) {
     return record?.type === "scan" ? "Image pending" : "No scan image";
+  }
+  if (imageUrl.startsWith("data:image/")) {
+    return translateWebTextNodeValue("Stored preview");
   }
   if (imageUrl.includes("/camera/") || imageUrl.includes("camera")) {
     return "Field camera image";
@@ -1210,17 +1233,36 @@ function markImageUnavailable(imageElement) {
   frame?.classList.remove("has-image");
   frame?.classList.add("is-empty", "is-unavailable");
   if (unavailableLabel) {
-    unavailableLabel.textContent = "Image unavailable";
+    unavailableLabel.textContent = translateWebTextNodeValue("Image unavailable");
   }
   if (imageElement === detailImage && detailImageCaption) {
-    detailImageCaption.textContent = "Image unavailable";
+    detailImageCaption.textContent = translateWebTextNodeValue("Image unavailable");
   }
+}
+
+function normalizeImageSourceList(imageSource) {
+  const values = Array.isArray(imageSource) ? imageSource : [imageSource];
+  const normalized = [];
+  values.forEach((value) => {
+    const source = typeof value === "string" ? value.trim() : "";
+    if (source && !normalized.includes(source)) {
+      normalized.push(source);
+    }
+  });
+  return normalized;
 }
 
 function setImageElementSource(imageElement, imageUrl, altText) {
   if (!imageElement) {
     return;
   }
+  const sources = normalizeImageSourceList(imageUrl);
+  let sourceIndex = 0;
+  const applySource = (source) => {
+    imageElement.src = source;
+    imageElement.alt = altText;
+    imageElement.hidden = false;
+  };
   imageElement.onload = () => {
     if (imageElement.naturalWidth > 0) {
       const frame = imageElement.closest(".record-media, .media-frame, .image-stage");
@@ -1228,11 +1270,16 @@ function setImageElementSource(imageElement, imageUrl, altText) {
       frame?.classList.remove("is-empty", "is-unavailable");
     }
   };
-  imageElement.onerror = () => markImageUnavailable(imageElement);
-  if (imageUrl) {
-    imageElement.src = imageUrl;
-    imageElement.alt = altText;
-    imageElement.hidden = false;
+  imageElement.onerror = () => {
+    sourceIndex += 1;
+    if (sourceIndex < sources.length) {
+      applySource(sources[sourceIndex]);
+      return;
+    }
+    markImageUnavailable(imageElement);
+  };
+  if (sources.length > 0) {
+    applySource(sources[0]);
     return;
   }
   imageElement.removeAttribute("src");
@@ -1259,9 +1306,10 @@ function updateMediaFrame(container, imageUrl, altText) {
     return;
   }
   const imageElement = ensureMediaFrameImage(container, altText);
-  setImageElementSource(imageElement, imageUrl, altText);
-  container.classList.toggle("has-image", Boolean(imageUrl));
-  container.classList.toggle("is-empty", !imageUrl);
+  const sources = normalizeImageSourceList(imageUrl);
+  setImageElementSource(imageElement, sources, altText);
+  container.classList.toggle("has-image", sources.length > 0);
+  container.classList.toggle("is-empty", sources.length === 0);
 }
 
 function applySummary(summary) {
@@ -1472,6 +1520,9 @@ function updateSelectedRecordCard() {
   if (openSelectedRecordButton) {
     openSelectedRecordButton.disabled = !selectedRecordId;
   }
+  if (detailRemoveRecordButton) {
+    detailRemoveRecordButton.disabled = !selectedRecordId;
+  }
 }
 
 function selectRecord(recordId, { openDetail = false } = {}) {
@@ -1521,20 +1572,24 @@ function applyRecordsView(records, reviews, summary) {
       article.setAttribute("role", "button");
       article.setAttribute("aria-pressed", record.id === selectedRecordId ? "true" : "false");
       const scanResult = recordScanResult(record);
-      const imageUrl = recordImageUrl(record);
+      const imageSources = recordImageSources(record);
       const pillLabel = reviewStatusForRecord(record, latestAdminRecordReviews);
 
       const media = document.createElement("div");
-      media.className = `record-media ${imageUrl ? "has-image" : "is-empty"}`;
+      media.className = `record-media ${imageSources.length ? "has-image" : "is-empty"}`;
       const icon = document.createElement("span");
       icon.className = "record-media-icon";
       icon.textContent = record.type === "scan" ? "SCAN" : "LOG";
       media.appendChild(icon);
-      if (imageUrl) {
+      if (imageSources.length) {
         const image = document.createElement("img");
         image.loading = "lazy";
         media.appendChild(image);
-        setImageElementSource(image, imageUrl, `${recordTitle(record) || "Scan record"} capture`);
+        setImageElementSource(
+          image,
+          imageSources,
+          `${recordTitle(record) || "Scan record"} capture`,
+        );
       }
       const mediaLabel = document.createElement("span");
       mediaLabel.className = "record-media-label";
@@ -1577,7 +1632,18 @@ function applyRecordsView(records, reviews, summary) {
       const pill = document.createElement("span");
       pill.className = `pill ${reviewStatusPillClass((pillLabel || "").toLowerCase())}`;
       pill.textContent = pillLabel;
-      meta.append(time, pill);
+      const actions = document.createElement("div");
+      actions.className = "record-actions";
+      const removeButton = document.createElement("button");
+      removeButton.className = "table-action-button danger record-remove-button";
+      removeButton.type = "button";
+      removeButton.textContent = translateWebTextNodeValue("Remove");
+      removeButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        removeRecord(record, removeButton);
+      });
+      actions.appendChild(removeButton);
+      meta.append(time, pill, actions);
 
       article.append(media, body, meta);
       article.addEventListener("click", () => selectRecord(record.id, { openDetail: true }));
@@ -1628,6 +1694,9 @@ function renderSelectedRecordDetail() {
     if (detailRecordTitle) {
       detailRecordTitle.textContent = "No selected record";
     }
+    if (detailRemoveRecordButton) {
+      detailRemoveRecordButton.disabled = true;
+    }
     setImageElementSource(detailImage, "", "Selected scan capture");
     return;
   }
@@ -1635,13 +1704,16 @@ function renderSelectedRecordDetail() {
   selectedRecordId = selectedRecord.id || selectedRecordId;
   const selectedReview = reviewForRecord(selectedRecord, latestAdminRecordReviews);
   const scanResult = recordScanResult(selectedRecord);
-  const selectedImageUrl = recordImageUrl(selectedRecord);
+  const selectedImageSources = recordImageSources(selectedRecord);
   const treatmentSteps = recordTreatmentSteps(selectedRecord);
   if (detailRecordTitle) {
     detailRecordTitle.textContent = `${selectedRecord.id} - review the diagnosis, environment, and follow-up context.`;
   }
+  if (detailRemoveRecordButton) {
+    detailRemoveRecordButton.disabled = !selectedRecord.id;
+  }
   if (detailImageCaption) {
-    detailImageCaption.textContent = selectedImageUrl
+    detailImageCaption.textContent = selectedImageSources.length
       ? recordImageSourceLabel(selectedRecord)
       : "No image";
   }
@@ -1649,13 +1721,13 @@ function renderSelectedRecordDetail() {
     detailImageLabel.textContent = scanResult.diseaseDisplayName || diseaseDisplayName(scanResult.disease || selectedRecord.type);
   }
   if (detailImageStage) {
-    detailImageStage.classList.toggle("has-image", Boolean(selectedImageUrl));
-    detailImageStage.classList.toggle("is-empty", !selectedImageUrl);
+    detailImageStage.classList.toggle("has-image", selectedImageSources.length > 0);
+    detailImageStage.classList.toggle("is-empty", selectedImageSources.length === 0);
     detailImageStage.style.backgroundImage = "";
   }
   setImageElementSource(
     detailImage,
-    selectedImageUrl,
+    selectedImageSources,
     `${recordTitle(selectedRecord) || "Selected record"} capture`,
   );
   if (detailImage) {
@@ -1736,6 +1808,39 @@ function renderSelectedRecordDetail() {
           },
     ],
   );
+}
+
+async function removeRecord(record, button) {
+  const recordId = record?.id || selectedRecordId;
+  if (!recordId) {
+    return;
+  }
+  if (!adminToken) {
+    window.alert("Sign in before removing records.");
+    return;
+  }
+
+  const title = recordTitle(record) || recordId;
+  const confirmed = window.confirm(
+    `Remove "${title}" from Submitted Records? This also removes its review and treatment entries.`,
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  setButtonBusy(button || detailRemoveRecordButton, "Removing...", true);
+  try {
+    await apiRequest(`/api/records/${encodeURIComponent(recordId)}`, {
+      method: "DELETE",
+    });
+    selectedRecordId = "";
+    await hydrateAdminFromBackend({ silent: true });
+    setActivePage("records");
+  } catch (error) {
+    window.alert(error.message || "Unable to remove this record.");
+  } finally {
+    setButtonBusy(button || detailRemoveRecordButton, "", false);
+  }
 }
 
 async function hydrateAdminFromBackend({ silent = false } = {}) {
@@ -1935,6 +2040,47 @@ async function pollAnalysisJob(jobId) {
   }, 2000);
 }
 
+function createRecordImagePreviewDataUri(file) {
+  if (!file || !file.type?.startsWith("image/")) {
+    return Promise.resolve("");
+  }
+
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const scale = Math.min(
+          1,
+          RECORD_IMAGE_PREVIEW_MAX_EDGE / Math.max(image.width, image.height),
+        );
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        context?.drawImage(image, 0, 0, width, height);
+
+        let preview = canvas.toDataURL("image/jpeg", RECORD_IMAGE_PREVIEW_QUALITY);
+        if (preview.length > RECORD_IMAGE_PREVIEW_MAX_CHARS) {
+          preview = canvas.toDataURL("image/jpeg", 0.52);
+        }
+        resolve(preview.length <= RECORD_IMAGE_PREVIEW_MAX_CHARS ? preview : "");
+      } catch (_) {
+        resolve("");
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve("");
+    };
+    image.src = objectUrl;
+  });
+}
+
 async function submitImportedAnalysisImage(event) {
   event.preventDefault();
   const file = analysisImageInput?.files?.[0];
@@ -1957,6 +2103,10 @@ async function submitImportedAnalysisImage(event) {
     formData.append("image", file, file.name || "admin-import.jpg");
     formData.append("session_id", `web-admin-${Date.now()}`);
     formData.append("live_mode", "true");
+    const imagePreviewDataUri = await createRecordImagePreviewDataUri(file);
+    if (imagePreviewDataUri) {
+      formData.append("image_preview_data_uri", imagePreviewDataUri);
+    }
     const sensorPayload = latestSensorPayload();
     if (sensorPayload) {
       formData.append("sensor_reading", JSON.stringify(sensorPayload));
@@ -2829,6 +2979,13 @@ openSelectedRecordButton?.addEventListener("click", () => {
     selectedRecordId = latestAdminRecords[0].id || "";
   }
   selectRecord(selectedRecordId, { openDetail: true });
+});
+
+detailRemoveRecordButton?.addEventListener("click", () => {
+  const selectedRecord =
+    latestAdminRecords.find((record) => record.id === selectedRecordId) ||
+    latestAdminRecords[0];
+  removeRecord(selectedRecord, detailRemoveRecordButton);
 });
 
 [
