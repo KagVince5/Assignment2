@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: cd ai_backend && pip install -r requirements.txt
     startCommand: cd ai_backend && uvicorn ollama_backend:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
+    healthCheckPath: /livez
     autoDeploy: true
     envVars:
       - key: DATABASE_URL
@@ -15,7 +15,9 @@ services:
       - key: ALLOW_DATABASE_FALLBACK
         value: "false"
       - key: AI_LAYER_BASE_URL
-        value: http://161.118.235.40:8000
+        value: https://pineguard-ai-layer.kaguyahouraisan520.workers.dev
+      - key: AI_LAYER_FALLBACK_URLS
+        value: ""
       - key: AI_LAYER_TIMEOUT_SECONDS
         value: "240"
       - key: REQUEST_TIMEOUT_SECONDS
@@ -26,6 +28,32 @@ services:
         value: /tmp/pineguard_uploads
 
   - type: web
+    name: pineguard-api-backup
+    runtime: python
+    plan: free
+    buildCommand: cd ai_backend && pip install -r requirements.txt
+    startCommand: cd ai_backend && uvicorn ollama_backend:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /livez
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_FALLBACK_URL
+        value: ""
+      - key: ALLOW_DATABASE_FALLBACK
+        value: "false"
+      - key: AI_LAYER_BASE_URL
+        value: https://pineguard-ai-layer.kaguyahouraisan520.workers.dev
+      - key: AI_LAYER_TIMEOUT_SECONDS
+        value: "240"
+      - key: REQUEST_TIMEOUT_SECONDS
+        value: "240"
+      - key: PUBLIC_BASE_URL
+        value: https://pineguard-api-backup.onrender.com
+      - key: UPLOADS_DIR
+        value: /tmp/pineguard_backup_uploads
+
+  - type: web
     name: pineguard-web-admin
     runtime: static
     buildCommand: node deploy/render_write_web_config.mjs
@@ -34,6 +62,8 @@ services:
     envVars:
       - key: PINEGUARD_API_BASE_URL
         value: https://pineguard-api.onrender.com
+      - key: PINEGUARD_ADDITIONAL_API_BASE_URLS
+        value: https://pineguard-api-backup.onrender.com
     routes:
       - type: rewrite
         source: /*

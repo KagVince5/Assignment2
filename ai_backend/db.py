@@ -153,12 +153,36 @@ class UserSettings(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
 
 
+class IoTWifiConfig(Base):
+    __tablename__ = "iot_wifi_configs"
+
+    device_type: Mapped[str] = mapped_column(String(32), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    ssid: Mapped[str] = mapped_column(String(64), default="")
+    password: Mapped[str] = mapped_column(String(128), default="")
+    revision: Mapped[str] = mapped_column(String(64), index=True)
+    updated_by_user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
+
+
+class TranslationCache(Base):
+    __tablename__ = "translation_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_type: Mapped[str] = mapped_column(String(64), index=True)
+    source_id: Mapped[str] = mapped_column(String(128), index=True)
+    locale: Mapped[str] = mapped_column(String(16), index=True)
+    source_hash: Mapped[str] = mapped_column(String(64), index=True)
+    payload_json: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
+
+
 class SensorNode(Base):
     __tablename__ = "sensor_nodes"
 
     node_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    device_name: Mapped[str] = mapped_column(String(255), default="Demo Zone - Pineapple Plant")
-    location: Mapped[str] = mapped_column(String(255), default="Single demonstration area")
+    device_name: Mapped[str] = mapped_column(String(255), default="PineGuard Field Node 001")
+    location: Mapped[str] = mapped_column(String(255), default="Johor Operations A")
     firmware_version: Mapped[str] = mapped_column(String(64), default="1.0.0")
     status: Mapped[str] = mapped_column(String(32), default="online", index=True)
     last_heartbeat: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
@@ -964,21 +988,21 @@ def seed_default_data() -> None:
                 "password": "pineapple123",
                 "display_name": "PineGuard Admin",
                 "role": "admin",
-                "farm_location": "Johor Demo HQ",
+                "farm_location": "Johor Operations HQ",
             },
             {
                 "email": "officer@pineguard.local",
                 "password": "pineapple123",
                 "display_name": "Field Officer",
                 "role": "officer",
-                "farm_location": "Johor Demo Support",
+                "farm_location": "Johor Operations Support",
             },
             {
                 "email": "farmer@pineguard.local",
                 "password": "pineapple123",
-                "display_name": "Demo Farmer",
+                "display_name": "Field Farmer",
                 "role": "farmer",
-                "farm_location": "Single demonstration area",
+                "farm_location": "Assigned field area",
             },
         ):
             user = db.scalar(select(User).where(User.email == seed["email"]))
@@ -1006,14 +1030,14 @@ def seed_default_data() -> None:
 
         ensure_default_alert_rule(db)
 
-        node = db.get(SensorNode, "node_demo")
+        node = db.get(SensorNode, "node_field_001")
         if node is None:
             db.add(
                 SensorNode(
-                    node_id="node_demo",
-                    device_name="Demo Zone - Pineapple Plant",
-                    location="Single demonstration area",
-                    firmware_version="demo",
+                    node_id="node_field_001",
+                    device_name="PineGuard Field Node 001",
+                    location="Johor Operations A",
+                    firmware_version="2.0.1-cloud-render",
                     status="offline",
                     last_heartbeat=utcnow(),
                 )
