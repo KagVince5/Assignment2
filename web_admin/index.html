@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PineGuard Admin Portal</title>
-    <link rel="stylesheet" href="./styles.css?v=records-preview-fallback-20260610" />
+    <link rel="stylesheet" href="./styles.css?v=camera-preview-url-20260622" />
   </head>
   <body>
     <main class="experience-shell">
@@ -1074,6 +1074,23 @@
                       <strong>Waiting for uploaded image</strong>
                     </div>
                   </div>
+                  <div class="camera-live-panel">
+                    <div>
+                      <span>ESP32-CAM preview URL</span>
+                      <strong id="monitor-camera-preview-url">Waiting for camera heartbeat</strong>
+                      <small id="monitor-camera-preview-note">
+                        Open from a device on the same Wi-Fi or hotspot as the ESP32-CAM.
+                      </small>
+                    </div>
+                    <div class="camera-live-actions">
+                      <a class="secondary-button compact" id="monitor-camera-open-link" href="#" target="_blank" rel="noopener" aria-disabled="true">
+                        Open preview
+                      </a>
+                      <a class="secondary-button compact" id="monitor-camera-snapshot-link" href="#" target="_blank" rel="noopener" aria-disabled="true">
+                        Open snapshot
+                      </a>
+                    </div>
+                  </div>
                 </section>
 
               </div>
@@ -1412,6 +1429,6 @@
     </dialog>
 
     <script src="./pineguard-api-config.js?v=render-api-20260610-tunnel"></script>
-    <script src="./script.js?v=records-preview-fallback-20260610"></script>
+    <script src="./script.js?v=camera-preview-url-20260622"></script>
   </body>
 </html>

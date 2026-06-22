@@ -2013,6 +2013,58 @@ td {
   font-size: 1.3rem;
 }
 
+.camera-live-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(119, 144, 131, 0.24);
+}
+
+.camera-live-panel span,
+.camera-live-panel small {
+  display: block;
+  color: var(--text-soft);
+}
+
+.camera-live-panel span {
+  margin-bottom: 0.28rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.camera-live-panel strong {
+  display: block;
+  max-width: 34rem;
+  overflow-wrap: anywhere;
+  font-size: 0.98rem;
+}
+
+.camera-live-panel small {
+  margin-top: 0.28rem;
+  line-height: 1.5;
+}
+
+.camera-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.camera-live-actions a {
+  text-decoration: none;
+}
+
+.camera-live-actions a[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.52;
+}
+
 .endpoint-list,
 .settings-list {
   display: grid;
@@ -2495,9 +2547,14 @@ td {
 
   .endpoint-row,
   .setting-row,
+  .camera-live-panel,
   .sidebar-logout {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .camera-live-actions {
+    justify-content: flex-start;
   }
 
   .setting-control,

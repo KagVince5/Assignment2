@@ -51,6 +51,7 @@ try:
         AlertRule,
         AnalysisJob,
         CameraFrame,
+        CameraLiveStatus,
         ConsultationMessage,
         ConsultationSession,
         Expert,
@@ -88,6 +89,7 @@ except ImportError:
         AlertRule,
         AnalysisJob,
         CameraFrame,
+        CameraLiveStatus,
         ConsultationMessage,
         ConsultationSession,
         Expert,
@@ -160,6 +162,9 @@ IOT_WIFI_DEVICE_LABELS = {
 }
 IOT_WIFI_RESPONSE_POLL_SECONDS = int(os.getenv("IOT_WIFI_CONFIG_POLL_SECONDS", "60"))
 IOT_WIFI_CONFIG_TOKEN = os.getenv("IOT_WIFI_CONFIG_TOKEN", "").strip()
+CAMERA_LIVE_STATUS_STALE_SECONDS = int(
+    os.getenv("CAMERA_LIVE_STATUS_STALE_SECONDS", "180")
+)
 
 DEFAULT_TREATMENTS: dict[str, list[str]] = {
     "healthy": [
@@ -529,6 +534,18 @@ class IoTWifiDeviceConfigRequest(BaseModel):
 class IoTWifiSettingsRequest(BaseModel):
     esp32: IoTWifiDeviceConfigRequest | None = None
     esp32Cam: IoTWifiDeviceConfigRequest | None = None
+
+
+class CameraLiveStatusRequest(BaseModel):
+    nodeId: str = DEFAULT_NODE_ID
+    cameraBaseUrl: str = ""
+    streamUrl: str = ""
+    snapshotUrl: str = ""
+    captureUrl: str = ""
+    ipAddress: str = ""
+    wifiSsid: str = ""
+    firmwareVersion: str = ""
+    status: str = "online"
 
 
 class AlertRuleRequest(BaseModel):
@@ -1593,6 +1610,138 @@ def require_iot_wifi_config_access(request: Request, token: str | None = None) -
         raise HTTPException(status_code=403, detail="Invalid IoT Wi-Fi config token")
 
 
+def normalize_camera_preview_url(value: str | None, *, required: bool = False) -> str:
+    raw_value = (value or "").strip()
+    if not raw_value:
+        if required:
+            raise HTTPException(status_code=400, detail="Camera preview URL is required")
+        return ""
+    if len(raw_value) > 1024:
+        raise HTTPException(
+            status_code=400, detail="Camera preview URL must be 1024 characters or less"
+        )
+
+    parsed = urlparse(raw_value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(
+            status_code=400,
+            detail="Camera preview URL must start with http:// or https://",
+        )
+    return raw_value.rstrip("/")
+
+
+def derive_camera_origin(value: str) -> str:
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+
+def camera_preview_route(base_url: str, path: str) -> str:
+    return f"{base_url.rstrip('/')}/{path.lstrip('/')}" if base_url else ""
+
+
+def normalize_camera_live_status(payload: CameraLiveStatusRequest) -> dict[str, str]:
+    base_url = normalize_camera_preview_url(payload.cameraBaseUrl)
+    stream_url = normalize_camera_preview_url(payload.streamUrl)
+    snapshot_url = normalize_camera_preview_url(payload.snapshotUrl)
+    capture_url = normalize_camera_preview_url(payload.captureUrl)
+
+    if not base_url:
+        base_url = derive_camera_origin(stream_url or snapshot_url or capture_url)
+    if not base_url:
+        raise HTTPException(status_code=400, detail="Camera preview URL is required")
+
+    return {
+        "node_id": (payload.nodeId or DEFAULT_NODE_ID).strip()[:64] or DEFAULT_NODE_ID,
+        "camera_base_url": base_url,
+        "stream_url": stream_url or camera_preview_route(base_url, "stream"),
+        "snapshot_url": snapshot_url or camera_preview_route(base_url, "jpg"),
+        "capture_url": capture_url or camera_preview_route(base_url, "capture"),
+        "ip_address": (payload.ipAddress or "").strip()[:64],
+        "wifi_ssid": (payload.wifiSsid or "").strip()[:64],
+        "firmware_version": (payload.firmwareVersion or "").strip()[:64],
+        "status": (
+            payload.status.strip().lower()
+            if payload.status.strip().lower() in {"online", "offline", "warning"}
+            else "online"
+        ),
+    }
+
+
+def camera_status_seen_age_seconds(status_row: CameraLiveStatus) -> int | None:
+    last_seen_at = status_row.last_seen_at
+    if last_seen_at is None:
+        return None
+    if last_seen_at.tzinfo is None:
+        last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
+    return max(0, int((utcnow() - last_seen_at).total_seconds()))
+
+
+def serialize_camera_live_status(
+    status_row: CameraLiveStatus | None,
+) -> dict[str, Any] | None:
+    if status_row is None:
+        return None
+
+    age_seconds = camera_status_seen_age_seconds(status_row)
+    is_online = (
+        status_row.status == "online"
+        and age_seconds is not None
+        and age_seconds <= CAMERA_LIVE_STATUS_STALE_SECONDS
+    )
+    return {
+        "nodeId": status_row.node_id,
+        "cameraBaseUrl": status_row.camera_base_url,
+        "streamUrl": status_row.stream_url,
+        "snapshotUrl": status_row.snapshot_url,
+        "captureUrl": status_row.capture_url,
+        "ipAddress": status_row.ip_address,
+        "wifiSsid": status_row.wifi_ssid,
+        "firmwareVersion": status_row.firmware_version,
+        "status": "online" if is_online else "stale",
+        "reportedStatus": status_row.status,
+        "lastSeenAt": datetime_to_unix_ms(status_row.last_seen_at),
+        "lastSeenAgeSeconds": age_seconds,
+        "staleAfterSeconds": CAMERA_LIVE_STATUS_STALE_SECONDS,
+        "sameNetworkRequired": True,
+    }
+
+
+def upsert_camera_live_status(
+    db: Session, payload: CameraLiveStatusRequest
+) -> CameraLiveStatus:
+    normalized = normalize_camera_live_status(payload)
+    now = utcnow()
+
+    node = db.get(SensorNode, normalized["node_id"])
+    if node is None:
+        node = SensorNode(
+            node_id=normalized["node_id"],
+            device_name="PineGuard ESP32-CAM",
+            location=DEFAULT_FIELD_LOCATION,
+            firmware_version=normalized["firmware_version"] or "esp32-cam",
+            status="online",
+            last_heartbeat=now,
+        )
+        db.add(node)
+    else:
+        node.status = "online"
+        node.last_heartbeat = now
+
+    status_row = db.get(CameraLiveStatus, normalized["node_id"])
+    if status_row is None:
+        status_row = CameraLiveStatus(**normalized, last_seen_at=now, updated_at=now)
+        db.add(status_row)
+        return status_row
+
+    for key, value in normalized.items():
+        setattr(status_row, key, value)
+    status_row.last_seen_at = now
+    status_row.updated_at = now
+    return status_row
+
+
 def serialize_alert_rule(rule: AlertRule) -> dict[str, Any]:
     return {
         "id": rule.id,
@@ -1737,6 +1886,17 @@ DATABASE_ENTITY_DEFINITIONS: list[dict[str, Any]] = [
         "apiPath": "/api/camera-frames/history",
         "mobileSurface": "Scan and diagnostics frame preview.",
         "webSurface": "System Monitor camera preview.",
+        "interfaceStatus": "covered",
+    },
+    {
+        "model": CameraLiveStatus,
+        "name": "Camera live status",
+        "domain": "Hardware",
+        "description": "ESP32-CAM current LAN preview URL, stream URL, and Wi-Fi heartbeat.",
+        "latestField": "last_seen_at",
+        "apiPath": "/api/iot/camera-status",
+        "mobileSurface": "Field camera same-Wi-Fi preview.",
+        "webSurface": "System Monitor ESP32-CAM preview URL.",
         "interfaceStatus": "covered",
     },
     {
@@ -3774,6 +3934,33 @@ def camera_frame_history(
     return {"frames": [serialize_camera_frame(row, request) for row in rows]}
 
 
+@app.post("/api/iot/camera-status")
+def update_iot_camera_status(
+    payload: CameraLiveStatusRequest,
+    request: Request,
+    token: str | None = None,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    require_iot_wifi_config_access(request, token)
+    status_row = upsert_camera_live_status(db, payload)
+    db.commit()
+    db.refresh(status_row)
+    return {
+        "status": "ok",
+        "camera": serialize_camera_live_status(status_row),
+    }
+
+
+@app.get("/api/admin/iot/camera-status")
+def get_admin_iot_camera_status(
+    node_id: str = DEFAULT_NODE_ID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_admin_user),
+) -> dict[str, Any]:
+    status_row = db.get(CameraLiveStatus, node_id)
+    return {"camera": serialize_camera_live_status(status_row)}
+
+
 @app.get("/api/alerts")
 def get_alerts(
     request: Request,
@@ -4361,6 +4548,11 @@ def admin_summary(
         .order_by(desc(CameraFrame.captured_at), desc(CameraFrame.id))
         .limit(1)
     )
+    latest_camera_status = db.scalar(
+        select(CameraLiveStatus)
+        .order_by(desc(CameraLiveStatus.last_seen_at))
+        .limit(1)
+    )
     latest_review = db.scalar(
         select(RecordReview).order_by(desc(RecordReview.reviewed_at)).limit(1)
     )
@@ -4398,6 +4590,7 @@ def admin_summary(
             "latestFrame": serialize_camera_frame(latest_frame, request)
             if latest_frame
             else None,
+            "latestCameraStatus": serialize_camera_live_status(latest_camera_status),
         },
         "latestReview": serialize_record_review(latest_review)
         if latest_review

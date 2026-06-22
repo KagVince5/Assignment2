@@ -94,6 +94,10 @@ const monitorAlertStatus = document.getElementById("monitor-alert-status");
 const monitorAlertNote = document.getElementById("monitor-alert-note");
 const monitorCameraPreview = document.getElementById("monitor-camera-preview");
 const monitorCameraFreshness = document.getElementById("monitor-camera-freshness");
+const monitorCameraPreviewUrl = document.getElementById("monitor-camera-preview-url");
+const monitorCameraPreviewNote = document.getElementById("monitor-camera-preview-note");
+const monitorCameraOpenLink = document.getElementById("monitor-camera-open-link");
+const monitorCameraSnapshotLink = document.getElementById("monitor-camera-snapshot-link");
 const monitorFreshnessLog = document.getElementById("monitor-freshness-log");
 const coverageHealthPill = document.getElementById("coverage-health-pill");
 const coverageTableCount = document.getElementById("coverage-table-count");
@@ -284,6 +288,12 @@ const WEB_MS_EXACT = {
   "ESP32 connection": "Sambungan ESP32",
   "ESP32 sensor node": "Nod sensor ESP32",
   "ESP32-CAM": "ESP32-CAM",
+  "ESP32-CAM preview URL": "URL pratonton ESP32-CAM",
+  "Waiting for camera heartbeat": "Menunggu degupan kamera",
+  "Open from a device on the same Wi-Fi or hotspot as the ESP32-CAM.":
+    "Buka daripada peranti pada Wi-Fi atau hotspot yang sama dengan ESP32-CAM.",
+  "Open preview": "Buka pratonton",
+  "Open snapshot": "Buka imej",
   "Network name used by the sensor node": "Nama rangkaian yang digunakan oleh nod sensor",
   "Network name used by the camera node": "Nama rangkaian yang digunakan oleh nod kamera",
   "Wi-Fi name": "Nama Wi-Fi",
@@ -1358,6 +1368,28 @@ function updateMediaFrame(container, imageUrl, altText) {
   container.classList.toggle("is-empty", sources.length === 0);
 }
 
+function appendCacheBust(url) {
+  const value = typeof url === "string" ? url.trim() : "";
+  if (!value) {
+    return "";
+  }
+  return `${value}${value.includes("?") ? "&" : "?"}t=${Date.now()}`;
+}
+
+function setCameraLiveAction(link, url) {
+  if (!link) {
+    return;
+  }
+  const value = typeof url === "string" ? url.trim() : "";
+  if (!value) {
+    link.setAttribute("href", "#");
+    link.setAttribute("aria-disabled", "true");
+    return;
+  }
+  link.setAttribute("href", value);
+  link.setAttribute("aria-disabled", "false");
+}
+
 function applySummary(summary) {
   if (!summary) {
     return;
@@ -2328,6 +2360,20 @@ function applyAnalysisView(jobs, alerts, records) {
 function applyMonitorView(summary) {
   const latestReading = summary.nodes?.latestReading;
   const latestFrame = summary.nodes?.latestFrame;
+  const latestCameraStatus = summary.nodes?.latestCameraStatus;
+  const liveCameraBaseUrl = latestCameraStatus?.cameraBaseUrl || "";
+  const liveCameraSnapshotUrl = latestCameraStatus?.snapshotUrl || "";
+  const liveCameraOnline = latestCameraStatus?.status === "online";
+  const liveCameraSeenAt = latestCameraStatus?.lastSeenAt
+    ? formatDateTime(latestCameraStatus.lastSeenAt)
+    : "";
+  const liveCameraWifi = latestCameraStatus?.wifiSsid
+    ? `Wi-Fi ${latestCameraStatus.wifiSsid}`
+    : "same Wi-Fi or hotspot";
+  const liveCameraIp = latestCameraStatus?.ipAddress || "";
+  const previewImageUrl = liveCameraSnapshotUrl
+    ? appendCacheBust(liveCameraSnapshotUrl)
+    : latestFrame?.imageUrl || "";
   const unreadAlerts = summary.alerts?.unread || 0;
   const serviceNote = summary.database?.fallbackActive
     ? "Service is degraded; workspace data remains available."
@@ -2348,12 +2394,22 @@ function applyMonitorView(summary) {
       : "No sensor reading stored yet";
   }
   if (monitorCameraStatus) {
-    monitorCameraStatus.textContent = latestFrame ? "Online" : "Waiting";
+    monitorCameraStatus.textContent = liveCameraBaseUrl
+      ? liveCameraOnline
+        ? "Live"
+        : "Stale"
+      : latestFrame
+        ? "Stored"
+        : "Waiting";
   }
   if (monitorCameraNote) {
-    monitorCameraNote.textContent = latestFrame
-      ? `Latest frame stored at ${formatDateTime(latestFrame.capturedAt)}`
-      : "No camera frame history yet";
+    monitorCameraNote.textContent = liveCameraBaseUrl
+      ? liveCameraOnline
+        ? `Preview URL ${liveCameraBaseUrl} on ${liveCameraWifi}`
+        : `Preview URL last seen ${liveCameraSeenAt || "recently"}; power the ESP32-CAM and keep this browser on ${liveCameraWifi}.`
+      : latestFrame
+        ? `Latest frame stored at ${formatDateTime(latestFrame.capturedAt)}`
+        : "No camera frame history yet";
   }
   if (monitorAlertStatus) {
     monitorAlertStatus.textContent = unreadAlerts > 0 ? "Active" : "Running";
@@ -2362,25 +2418,52 @@ function applyMonitorView(summary) {
     monitorAlertNote.textContent = `${unreadAlerts} unread alerts in the threshold pipeline`;
   }
   if (monitorCameraFreshness) {
-    monitorCameraFreshness.textContent = latestFrame
-      ? formatDateTime(latestFrame.capturedAt)
-      : "No frame yet";
+    monitorCameraFreshness.textContent = liveCameraBaseUrl
+      ? liveCameraOnline
+        ? "Live preview"
+        : "Preview stale"
+      : latestFrame
+        ? formatDateTime(latestFrame.capturedAt)
+        : "No frame yet";
+  }
+  if (monitorCameraPreviewUrl) {
+    monitorCameraPreviewUrl.textContent =
+      liveCameraBaseUrl || "Waiting for camera heartbeat";
+  }
+  if (monitorCameraPreviewNote) {
+    monitorCameraPreviewNote.textContent = liveCameraBaseUrl
+      ? liveCameraOnline
+        ? `Open from the same network. ${liveCameraIp ? `Camera IP ${liveCameraIp}. ` : ""}${liveCameraWifi}.`
+        : `Last seen ${liveCameraSeenAt || "recently"}. Reconnect ESP32-CAM power and Wi-Fi to refresh the URL.`
+      : "Open from a device on the same Wi-Fi or hotspot as the ESP32-CAM.";
+  }
+  if (monitorCameraOpenLink || monitorCameraSnapshotLink) {
+    setCameraLiveAction(monitorCameraOpenLink, liveCameraBaseUrl);
+    setCameraLiveAction(monitorCameraSnapshotLink, liveCameraSnapshotUrl);
   }
   if (monitorCameraPreview) {
     updateMediaFrame(
       monitorCameraPreview,
-      latestFrame?.imageUrl || "",
+      previewImageUrl,
       "Latest field camera frame",
     );
     const overlayLabel = monitorCameraPreview.querySelector(".camera-overlay span");
     const overlayTitle = monitorCameraPreview.querySelector(".camera-overlay strong");
     if (overlayLabel) {
-      overlayLabel.textContent = latestFrame?.imageUrl ? "Latest frame" : "Camera frame";
+      overlayLabel.textContent = liveCameraSnapshotUrl
+        ? "Live ESP32-CAM"
+        : latestFrame?.imageUrl
+          ? "Latest frame"
+          : "Camera frame";
     }
     if (overlayTitle) {
-      overlayTitle.textContent = latestFrame?.imageUrl
-        ? formatDateTime(latestFrame.capturedAt || latestFrame.uploadedAt)
-        : "Waiting for uploaded image";
+      overlayTitle.textContent = liveCameraSnapshotUrl
+        ? liveCameraOnline
+          ? "Same-Wi-Fi preview"
+          : "Last reported preview URL"
+        : latestFrame?.imageUrl
+          ? formatDateTime(latestFrame.capturedAt || latestFrame.uploadedAt)
+          : "Waiting for uploaded image";
     }
   }
   renderTimeline(
@@ -2391,6 +2474,17 @@ function applyMonitorView(summary) {
         title: "Admin summary refreshed",
         note: "Dashboard, monitor, and settings now reflect current workspace data.",
       },
+      liveCameraBaseUrl
+        ? {
+            time: liveCameraSeenAt || "Now",
+            title: liveCameraOnline ? "Camera preview URL live" : "Camera preview URL stale",
+            note: `ESP32-CAM reported ${liveCameraBaseUrl}; direct preview requires ${liveCameraWifi}.`,
+          }
+        : {
+            time: "Pending",
+            title: "Camera preview URL pending",
+            note: "Waiting for ESP32-CAM to report its current Wi-Fi address.",
+          },
       latestFrame
         ? {
             time: formatDateTime(latestFrame.uploadedAt || latestFrame.capturedAt),

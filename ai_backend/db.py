@@ -215,6 +215,22 @@ class CameraFrame(Base):
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
 
 
+class CameraLiveStatus(Base):
+    __tablename__ = "camera_live_status"
+
+    node_id: Mapped[str] = mapped_column(String(64), ForeignKey("sensor_nodes.node_id"), primary_key=True)
+    camera_base_url: Mapped[str] = mapped_column(String(1024), default="")
+    stream_url: Mapped[str] = mapped_column(String(1024), default="")
+    snapshot_url: Mapped[str] = mapped_column(String(1024), default="")
+    capture_url: Mapped[str] = mapped_column(String(1024), default="")
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    wifi_ssid: Mapped[str] = mapped_column(String(64), default="")
+    firmware_version: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(32), default="online", index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: utcnow())
+
+
 class AlertRule(Base):
     __tablename__ = "alert_rules"
 
