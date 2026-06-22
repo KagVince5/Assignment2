@@ -3951,6 +3951,16 @@ def update_iot_camera_status(
     }
 
 
+@app.get("/api/iot/camera-status")
+def get_iot_camera_status(
+    node_id: str = DEFAULT_NODE_ID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    status_row = db.get(CameraLiveStatus, node_id)
+    return {"camera": serialize_camera_live_status(status_row)}
+
+
 @app.get("/api/admin/iot/camera-status")
 def get_admin_iot_camera_status(
     node_id: str = DEFAULT_NODE_ID,
